@@ -46,10 +46,13 @@ class ShoppingCartsController extends Controller {
 
   async addGoods() {
     const { ctx } = this;
-    const { shoppingCartCode, goodsCode } = ctx.request.body;
+    const { shoppingCartCode, goodsCode, buyCount } = ctx.request.body;
 
     if (!goodsCode) {
       return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+    if (isNaN(buyCount) || buyCount < 1) {
+      return ctx.helper.responseError({ message: '商品数量不能小于1' });
     }
 
     try {
@@ -68,7 +71,8 @@ class ShoppingCartsController extends Controller {
         return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
       }
 
-      await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
+      await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount });
+
       return ctx.helper.responseSuccess({ data: { shoppingCartCode: shoppingCart.shoppingCartCode } });
     } catch (error) {
       return ctx.helper.responseError({}, error);
