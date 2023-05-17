@@ -11,6 +11,7 @@ module.exports = app => {
     goodsDetails: { field: 'goods_details', type: TEXT, allowNull: true, comment: '商品详情' },
     goodsPrice: { field: 'goods_price', type: FLOAT, allowNull: false, comment: '商品价格' },
     goodsCatalog: { field: 'goods_catalog', type: STRING(50), allowNull: false, comment: '商品目录' },
+    goodsInventory: { field: 'goods_inventory', type: INTEGER, allowNull: false, comment: '商品库存' },
     createdAt: { field: 'created_at', type: DATE, allowNull: false, comment: '创建时间' },
     updatedAt: { field: 'updated_at', type: DATE, allowNull: false, comment: '更新时间' },
     deletedAt: { field: 'deleted_at', type: DATE, allowNull: true, comment: '删除时间' },

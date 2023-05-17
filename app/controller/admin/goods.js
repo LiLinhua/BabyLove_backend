@@ -6,7 +6,7 @@ const goodsCatalogEnum = require('../../constants/goods');
 class GoodsController extends Controller {
   async addGoods() {
     const { ctx } = this;
-    const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsPictureCodes } = ctx.request.body;
+    const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
     if (!goodsTitle) {
@@ -15,8 +15,14 @@ class GoodsController extends Controller {
     if (!goodsPrice) {
       return ctx.helper.responseError({ message: '商品价格不能为空' });
     }
-    if (isNaN(goodsPrice)) {
+    if (isNaN(goodsPrice) || goodsPrice < 0) {
       return ctx.helper.responseError({ message: '商品价格不合法' });
+    }
+    if (!goodsInventory) {
+      return ctx.helper.responseError({ message: '商品库存不能为空' });
+    }
+    if (isNaN(goodsInventory) || goodsInventory < 0) {
+      return ctx.helper.responseError({ message: '商品库存不合法' });
     }
     if (!Array.isArray(goodsPictureCodes) || !goodsPictureCodes.length) {
       return ctx.helper.responseError({ message: '商品图片不能为空' });
@@ -28,7 +34,7 @@ class GoodsController extends Controller {
       transaction = await ctx.model.transaction();
 
       // 创建商品
-      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog: goodsCatalogEnum.CHILDREN_CLOTHING }, { transaction });
+      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsCatalog: goodsCatalogEnum.CHILDREN_CLOTHING }, { transaction });
 
       // 创建商品图片
       const goodsPictures = goodsPictureCodes.map(code => {
@@ -50,7 +56,7 @@ class GoodsController extends Controller {
 
   async updateGoods() {
     const { ctx } = this;
-    const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog, goodsPictureCodes } = ctx.request.body;
+    const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
     if (!goodsCode) {
@@ -65,8 +71,14 @@ class GoodsController extends Controller {
     if (!goodsPrice) {
       return ctx.helper.responseError({ message: '商品价格不能为空' });
     }
-    if (isNaN(goodsPrice)) {
+    if (isNaN(goodsPrice) || goodsPrice < 0) {
       return ctx.helper.responseError({ message: '商品价格不合法' });
+    }
+    if (!goodsInventory) {
+      return ctx.helper.responseError({ message: '商品库存不能为空' });
+    }
+    if (isNaN(goodsInventory) || goodsInventory < 0) {
+      return ctx.helper.responseError({ message: '商品库存不合法' });
     }
     if (!Array.isArray(goodsPictureCodes) || !goodsPictureCodes.length) {
       return ctx.helper.responseError({ message: '商品图片不能为空' });
@@ -84,7 +96,7 @@ class GoodsController extends Controller {
       transaction = await ctx.model.transaction();
 
       // 更新商品
-      await ctx.service.goods.update({ goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog }, { goodsCode }, { transaction });
+      await ctx.service.goods.update({ goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsCatalog }, { goodsCode }, { transaction });
 
       // 更新商品图片
       const goodsPictures = goodsPictureCodes.map(code => {
@@ -107,6 +119,33 @@ class GoodsController extends Controller {
 
     try {
       const data = await ctx.service.goods.findAll({}, {
+        attributes: {
+          exclude: [ 'deletedAt' ],
+        },
+        include: [{
+          model: app.model.GoodsPictures,
+          as: 'pictures',
+          attributes: [ 'pictureCode', 'pictureUrl' ],
+          through: {
+            attributes: [],
+          },
+        }],
+      });
+      return ctx.helper.responseSuccess({ data });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  async queryGoodsDetails() {
+    const { ctx, app } = this;
+    const { goodsCode } = ctx.query;
+    if (!goodsCode) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+
+    try {
+      const data = await ctx.service.goods.findOne({ goodsCode }, {
         attributes: {
           exclude: [ 'deletedAt' ],
         },

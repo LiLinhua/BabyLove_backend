@@ -30,6 +30,11 @@ module.exports = {
       console.error(error);
     }
 
+    if (code === 0) {
+      // 未登录
+      this.ctx.status = 401;
+    }
+
     this.ctx.body = { code, success, message, data, requestId: this.ctx.requestId };
   },
 };

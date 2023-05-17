@@ -5,7 +5,6 @@ class GoodsController extends Controller {
   async login() {
     const { ctx } = this;
     const { username, password } = ctx.request.body;
-
     if (!ctx.service.user.checkIsAdmin(username, password)) {
       return ctx.helper.responseError({ message: '账号或者密码错误' });
     }

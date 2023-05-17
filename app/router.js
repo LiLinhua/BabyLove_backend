@@ -15,17 +15,21 @@ module.exports = app => {
   router.post('/admin/goods/addGoods', controller.admin.goods.addGoods);
   router.post('/admin/goods/updateGoods', controller.admin.goods.updateGoods);
   router.get('/admin/goods/queryAllGoods', controller.admin.goods.queryAllGoods);
+  router.get('/admin/goods/queryGoodsDetails', controller.admin.goods.queryGoodsDetails);
   router.get('/admin/shoppingCarts/queryAllShoppingCarts', controller.admin.shoppingCarts.queryAllShoppingCarts);
   router.post('/admin/shoppingCarts/addShoppingCart', controller.admin.shoppingCarts.addShoppingCart);
   router.post('/admin/shoppingCarts/addGoods', controller.admin.shoppingCarts.addGoods);
   router.get('/admin/shoppingCarts/queryAllGoods', controller.admin.shoppingCarts.queryAllGoods);
   router.post('/admin/shoppingCarts/removeGoods', controller.admin.shoppingCarts.removeGoods);
+  router.post('/admin/shoppingCarts/updateBuyCount', controller.admin.shoppingCarts.updateBuyCount);
   router.post('/admin/goodsPictures/addGoodsPictures', controller.admin.goodsPictures.addGoodsPictures);
 
 
   // 客户侧
   router.get('/custom/goods/queryAllGoods', controller.custom.goods.queryAllGoods);
+  router.get('/custom/goods/queryGoodsDetails', controller.custom.goods.queryGoodsDetails);
   router.post('/custom/shoppingCarts/addGoods', controller.custom.shoppingCarts.addGoods);
+  router.post('/custom/shoppingCarts/updateBuyCount', controller.custom.shoppingCarts.updateBuyCount);
   router.get('/custom/shoppingCarts/queryAllGoods', controller.custom.shoppingCarts.queryAllGoods);
   router.post('/custom/shoppingCarts/removeGoods', controller.custom.shoppingCarts.removeGoods);
 };
