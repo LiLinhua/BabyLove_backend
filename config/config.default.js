@@ -46,7 +46,7 @@ module.exports = appInfo => {
   config.middleware = [ 'adminLogin' ];
   config.adminLogin = {
     enable: true,
-    match: '/hy',
+    match: '/admin',
   };
 
   config.multipart = {
