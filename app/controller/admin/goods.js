@@ -163,6 +163,22 @@ class GoodsController extends Controller {
       return ctx.helper.responseError({}, error);
     }
   }
+
+  async removeGoods() {
+    const { ctx } = this;
+    const { goodsCode } = ctx.request.body;
+
+    if (!goodsCode) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+
+    try {
+      await ctx.service.goods.destroy({ goodsCode });
+      return ctx.helper.responseSuccess();
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
 }
 
 module.exports = GoodsController;

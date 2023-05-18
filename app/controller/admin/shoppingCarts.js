@@ -28,6 +28,7 @@ class ShoppingCartsController extends Controller {
           }],
         }],
       });
+
       return ctx.helper.responseSuccess({ data });
     } catch (error) {
       return ctx.helper.responseError({}, error);
@@ -55,16 +56,14 @@ class ShoppingCartsController extends Controller {
     if (isNaN(buyCount) || buyCount < 1) {
       return ctx.helper.responseError({ message: '商品数量不能小于1' });
     }
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
 
     try {
-      let shoppingCart;
-      if (shoppingCartCode) {
-        shoppingCart = await ctx.service.shoppingCarts.findOne({ shoppingCartCode });
-        if (!shoppingCart) {
-          return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
-        }
-      } else {
-        shoppingCart = await ctx.service.shoppingCarts.create({ shoppingCartCode: uuidv4() });
+      const shoppingCart = await ctx.service.shoppingCarts.findOne({ shoppingCartCode });
+      if (!shoppingCart) {
+        return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
       }
 
       const goods = await ctx.service.goods.findOne({ goodsCode });
@@ -72,7 +71,12 @@ class ShoppingCartsController extends Controller {
         return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
       }
 
-      await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount });
+      const relation = await ctx.service.goodsShoppingCartsRelations.findOne({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
+      if (relation) {
+        await ctx.service.goodsShoppingCartsRelations.update({ buyCount: relation.buyCount + buyCount }, { shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
+      } else {
+        await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount });
+      }
 
       return ctx.helper.responseSuccess({ data: { shoppingCartCode: shoppingCart.shoppingCartCode } });
     } catch (error) {
@@ -114,7 +118,7 @@ class ShoppingCartsController extends Controller {
 
   async queryAllGoods() {
     const { ctx, app } = this;
-    const { shoppingCartCode } = ctx.request.body;
+    const { shoppingCartCode } = ctx.query;
 
     if (!shoppingCartCode) {
       return ctx.helper.responseError({ message: '购物车编码不能为空' });

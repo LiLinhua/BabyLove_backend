@@ -29,7 +29,6 @@ module.exports = app => {
     // 购物车与商品多对多
     ShoppingCarts.belongsToMany(Goods, { as: 'goods', through: GoodsShoppingCartsRelations, foreignKey: 'shoppingCartCode', sourceKey: 'shoppingCartCode', otherKey: 'goodsCode' });
     Goods.belongsToMany(ShoppingCarts, { as: 'shoppingCarts', through: GoodsShoppingCartsRelations, foreignKey: 'goodsCode', sourceKey: 'goodsCode', otherKey: 'shoppingCartCode' });
-
   };
 
   return Goods;
