@@ -21,7 +21,8 @@ module.exports = app => {
   router.post('/admin/shoppingCarts/addShoppingCart', controller.admin.shoppingCarts.addShoppingCart);
   router.post('/admin/shoppingCarts/addGoods', controller.admin.shoppingCarts.addGoods);
   router.get('/admin/shoppingCarts/queryAllGoods', controller.admin.shoppingCarts.queryAllGoods);
-  router.post('/admin/shoppingCarts/removeGoods', controller.admin.shoppingCarts.removeGoods);
+  router.post('/admin/shoppingCarts/batchRemoveGoods', controller.admin.shoppingCarts.batchRemoveGoods);
+  router.post('/admin/shoppingCarts/batchUpdateSelected', controller.admin.shoppingCarts.batchUpdateSelected);
   router.post('/admin/shoppingCarts/updateBuyCount', controller.admin.shoppingCarts.updateBuyCount);
   router.post('/admin/goodsPictures/addGoodsPictures', controller.admin.goodsPictures.addGoodsPictures);
 
@@ -32,7 +33,8 @@ module.exports = app => {
   router.post('/custom/shoppingCarts/addGoods', controller.custom.shoppingCarts.addGoods);
   router.post('/custom/shoppingCarts/updateBuyCount', controller.custom.shoppingCarts.updateBuyCount);
   router.get('/custom/shoppingCarts/queryAllGoods', controller.custom.shoppingCarts.queryAllGoods);
-  router.post('/custom/shoppingCarts/removeGoods', controller.custom.shoppingCarts.removeGoods);
+  router.post('/custom/shoppingCarts/batchRemoveGoods', controller.custom.shoppingCarts.batchRemoveGoods);
   router.get('/custom/shoppingCarts/queryAllGoodsCount', controller.custom.shoppingCarts.queryAllGoodsCount);
   router.post('/custom/shoppingCarts/addShoppingCart', controller.custom.shoppingCarts.addShoppingCart);
+  router.post('/custom/shoppingCarts/batchUpdateSelected', controller.custom.shoppingCarts.batchUpdateSelected);
 };

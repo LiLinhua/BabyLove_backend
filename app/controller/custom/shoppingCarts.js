@@ -32,7 +32,7 @@ class ShoppingCartsController extends Controller {
       if (relation) {
         await ctx.service.goodsShoppingCartsRelations.update({ buyCount: relation.buyCount + buyCount }, { shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
       } else {
-        await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount });
+        await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount, selected: 0 });
       }
 
       return ctx.helper.responseSuccess({ data: { shoppingCartCode: shoppingCart.shoppingCartCode } });
@@ -67,6 +67,33 @@ class ShoppingCartsController extends Controller {
       }
       // 更新购买数量
       await ctx.service.goodsShoppingCartsRelations.update({ buyCount }, { shoppingCartCode, goodsCode });
+      return ctx.helper.responseSuccess();
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  async batchUpdateSelected() {
+    const { ctx } = this;
+    const { shoppingCartCode, goodsCodes, selected } = ctx.request.body;
+
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '购物车编码不能为空' });
+    }
+    if (!Array.isArray(goodsCodes) || goodsCodes.length < 1) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+    if ([ 0, 1 ].includes(selected)) {
+      return ctx.helper.responseError({ message: '选择状态不合法' });
+    }
+
+    try {
+      // 查询关联记录
+      const relations = await ctx.service.goodsShoppingCartsRelations.findAll({ shoppingCartCode, goodsCode: goodsCodes }, { raw: true });
+      // 更新购买选择状态
+      const newRelations = relations.map(relation => ({ ...relation, selected }));
+      await ctx.service.goodsShoppingCartsRelations.bulkCreate(newRelations, { updateOnDuplicate: [ 'selected' ] });
+
       return ctx.helper.responseSuccess();
     } catch (error) {
       return ctx.helper.responseError({}, error);
@@ -144,7 +171,7 @@ class ShoppingCartsController extends Controller {
     }
   }
 
-  async removeGoods() {
+  async batchRemoveGoods() {
     const { ctx } = this;
 
     const { shoppingCartCode, goodsCodes } = ctx.request.body;

@@ -7,7 +7,8 @@ class ShoppingCartsController extends Controller {
     const { ctx, app } = this;
 
     try {
-      const data = await ctx.service.shoppingCarts.findAll({}, {
+      // 查询购物车与商品信息
+      const shoppingCarts = await ctx.service.shoppingCarts.findAll({}, {
         attributes: [ 'shoppingCartCode' ],
         include: [{
           model: app.model.Goods,
@@ -29,7 +30,41 @@ class ShoppingCartsController extends Controller {
         }],
       });
 
-      return ctx.helper.responseSuccess({ data });
+      // 获取购物车编码
+      let shoppingCartCodes = [];
+      if (Array.isArray(shoppingCarts)) {
+        shoppingCartCodes = shoppingCarts.map(shoppingCart => {
+          return shoppingCart.shoppingCartCode;
+        });
+      }
+
+      // 查询购物车与商品关系
+      const relations = await ctx.service.goodsShoppingCartsRelations.findAll({ shoppingCartCode: shoppingCartCodes });
+      const relationsMap = {};
+      relations.forEach(relation => {
+        relationsMap[`${relation.shoppingCartCode}&${relation.goodsCode}`] = relation;
+      });
+
+      // 补充购物车商品的购买数量与是否选择字段
+      let newShoppingCarts = [];
+      if (Array.isArray(shoppingCarts)) {
+        newShoppingCarts = shoppingCarts.map(shoppingCart => {
+          shoppingCart = shoppingCart.toJSON();
+          let goods = shoppingCart.goods;
+          if (Array.isArray(goods)) {
+            goods = goods.map(good => {
+              if (relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`]) {
+                good.buyCount = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].buyCount || 1;
+                good.selected = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].selected || false;
+              }
+              return good;
+            });
+          }
+          shoppingCart.goods = goods;
+          return shoppingCart;
+        });
+      }
+      return ctx.helper.responseSuccess({ data: newShoppingCarts });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
@@ -75,7 +110,7 @@ class ShoppingCartsController extends Controller {
       if (relation) {
         await ctx.service.goodsShoppingCartsRelations.update({ buyCount: relation.buyCount + buyCount }, { shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
       } else {
-        await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount });
+        await ctx.service.goodsShoppingCartsRelations.create({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode, buyCount, selected: 0 });
       }
 
       return ctx.helper.responseSuccess({ data: { shoppingCartCode: shoppingCart.shoppingCartCode } });
@@ -116,6 +151,37 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  async batchUpdateSelected() {
+    const { ctx } = this;
+    const { shoppingCartCode, goodsCodes, selected } = ctx.request.body;
+
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '购物车编码不能为空' });
+    }
+    if (!Array.isArray(goodsCodes)) {
+      return ctx.helper.responseError({ message: '商品编码参数错误' });
+    }
+    if (![ 0, 1 ].includes(selected)) {
+      return ctx.helper.responseError({ message: '选择状态不合法' });
+    }
+
+    try {
+      // 查询关联记录
+      const where = { shoppingCartCode };
+      if (goodsCodes.length) {
+        where.goodsCode = goodsCodes;
+      }
+      const relations = await ctx.service.goodsShoppingCartsRelations.findAll(where, { raw: true });
+      // 更新购买选择状态
+      const newRelations = relations.map(relation => ({ ...relation, selected }));
+      await ctx.service.goodsShoppingCartsRelations.bulkCreate(newRelations, { updateOnDuplicate: [ 'selected' ] });
+
+      return ctx.helper.responseSuccess();
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
   async queryAllGoods() {
     const { ctx, app } = this;
     const { shoppingCartCode } = ctx.query;
@@ -125,12 +191,7 @@ class ShoppingCartsController extends Controller {
     }
 
     try {
-      const shoppingCart = await ctx.service.shoppingCarts.findOne({ shoppingCartCode });
-      if (!shoppingCart) {
-        return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
-      }
-
-      const data = await ctx.service.shoppingCarts.findOne({ shoppingCartCode }, {
+      let shoppingCart = await ctx.service.shoppingCarts.findOne({ shoppingCartCode }, {
         attributes: [ 'shoppingCartCode' ],
         include: [{
           model: app.model.Goods,
@@ -151,13 +212,38 @@ class ShoppingCartsController extends Controller {
           }],
         }],
       });
-      return ctx.helper.responseSuccess({ data });
+      if (!shoppingCart) {
+        return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
+      }
+
+      // 查询购物车与商品关系
+      const relations = await ctx.service.goodsShoppingCartsRelations.findOne({ shoppingCartCode });
+      const relationsMap = {};
+      relations.forEach(relation => {
+        relationsMap[`${relation.goodsCode}`] = relation;
+      });
+
+      // 补充购物车商品的购买数量与是否选择字段
+      shoppingCart = shoppingCart.toJSON();
+      let goods = shoppingCart.goods;
+      if (Array.isArray(goods)) {
+        goods = goods.map(good => {
+          if (relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`]) {
+            good.buyCount = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].buyCount || 1;
+            good.selected = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].selected || false;
+          }
+          return good;
+        });
+      }
+      shoppingCart.goods = goods;
+
+      return ctx.helper.responseSuccess({ data: shoppingCart });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
   }
 
-  async removeGoods() {
+  async batchRemoveGoods() {
     const { ctx } = this;
 
     const { shoppingCartCode, goodsCodes } = ctx.request.body;
