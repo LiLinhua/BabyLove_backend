@@ -34,7 +34,6 @@ module.exports = app => {
   router.post('/custom/shoppingCarts/updateBuyCount', controller.custom.shoppingCarts.updateBuyCount);
   router.get('/custom/shoppingCarts/queryAllGoods', controller.custom.shoppingCarts.queryAllGoods);
   router.post('/custom/shoppingCarts/batchRemoveGoods', controller.custom.shoppingCarts.batchRemoveGoods);
-  router.get('/custom/shoppingCarts/queryAllGoodsCount', controller.custom.shoppingCarts.queryAllGoodsCount);
   router.post('/custom/shoppingCarts/addShoppingCart', controller.custom.shoppingCarts.addShoppingCart);
   router.post('/custom/shoppingCarts/batchUpdateSelected', controller.custom.shoppingCarts.batchUpdateSelected);
 };

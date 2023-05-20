@@ -140,12 +140,15 @@ class ShoppingCartsController extends Controller {
         return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
       }
       // 检查库存
+      let newGoodsCount = buyCount;
+      let isOutOfStock = false;
       if (goods.goodsInventory < buyCount) {
-        return ctx.helper.responseError({ message: '该商品库存不足' });
+        newGoodsCount = goods.goodsInventory;
+        isOutOfStock = true;
       }
       // 更新购买数量
-      await ctx.service.goodsShoppingCartsRelations.update({ buyCount }, { shoppingCartCode, goodsCode });
-      return ctx.helper.responseSuccess();
+      await ctx.service.goodsShoppingCartsRelations.update({ buyCount: newGoodsCount }, { shoppingCartCode, goodsCode });
+      return ctx.helper.responseSuccess({ data: newGoodsCount, message: isOutOfStock ? '该商品库存不足' : '成功', errCode: isOutOfStock ? 'OUT_OF_STOCK' : undefined });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
@@ -212,15 +215,16 @@ class ShoppingCartsController extends Controller {
           }],
         }],
       });
+
       if (!shoppingCart) {
         return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
       }
 
       // 查询购物车与商品关系
-      const relations = await ctx.service.goodsShoppingCartsRelations.findOne({ shoppingCartCode });
+      const relations = await ctx.service.goodsShoppingCartsRelations.findAll({ shoppingCartCode }, { raw: true });
       const relationsMap = {};
-      relations.forEach(relation => {
-        relationsMap[`${relation.goodsCode}`] = relation;
+      relations && relations.forEach(relation => {
+        relationsMap[relation.goodsCode] = relation;
       });
 
       // 补充购物车商品的购买数量与是否选择字段
@@ -228,9 +232,9 @@ class ShoppingCartsController extends Controller {
       let goods = shoppingCart.goods;
       if (Array.isArray(goods)) {
         goods = goods.map(good => {
-          if (relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`]) {
-            good.buyCount = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].buyCount || 1;
-            good.selected = relationsMap[`${shoppingCart.shoppingCartCode}&${good.goodsCode}`].selected || false;
+          if (relationsMap[good.goodsCode]) {
+            good.buyCount = relationsMap[good.goodsCode].buyCount || 1;
+            good.selected = relationsMap[good.goodsCode].selected || false;
           }
           return good;
         });

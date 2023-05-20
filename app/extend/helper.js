@@ -10,9 +10,9 @@ module.exports = {
    * @param {Object} res.data 响应数据
    */
   responseSuccess(res = {}) {
-    const { code = 200, success = true, message = '成功', data = null } = res;
+    const { code = 200, success = true, message = '成功', data = null, errCode } = res;
 
-    this.ctx.body = { code, success, message, data, requestId: this.ctx.requestId };
+    this.ctx.body = { code, success, message, data, errCode, requestId: this.ctx.requestId };
   },
   /**
    * 失败响应
@@ -24,7 +24,7 @@ module.exports = {
    * @param {Object} error 错误信息
    */
   responseError(res = {}, error) {
-    const { code = 200, success = false, message = '请求失败，请稍后再试', data = null } = res;
+    const { code = 200, success = false, message = '请求失败，请稍后再试', data = null, errCode } = res;
 
     if (error) {
       console.error(error);
@@ -35,6 +35,6 @@ module.exports = {
       this.ctx.status = 401;
     }
 
-    this.ctx.body = { code, success, message, data, requestId: this.ctx.requestId };
+    this.ctx.body = { code, success, message, data, errCode, requestId: this.ctx.requestId };
   },
 };
