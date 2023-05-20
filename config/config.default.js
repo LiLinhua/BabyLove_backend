@@ -24,7 +24,7 @@ module.exports = appInfo => {
     database: 'baby_love',
     username: 'root',
     password: '12345678',
-    logging: false,
+    logging: true,
   };
 
   // 配置 xtpl 模板渲染

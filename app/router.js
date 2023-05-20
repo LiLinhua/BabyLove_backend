@@ -6,6 +6,7 @@
 module.exports = app => {
   const { router, controller } = app;
   router.get('/', controller.index.index);
+  router.get(/^(?=\/view\/)/, controller.index.index);
 
   // 登录
   router.post('/user/login', controller.admin.user.login);
@@ -36,4 +37,5 @@ module.exports = app => {
   router.post('/custom/shoppingCarts/batchRemoveGoods', controller.custom.shoppingCarts.batchRemoveGoods);
   router.post('/custom/shoppingCarts/addShoppingCart', controller.custom.shoppingCarts.addShoppingCart);
   router.post('/custom/shoppingCarts/batchUpdateSelected', controller.custom.shoppingCarts.batchUpdateSelected);
+  router.get('/custom/shoppingCarts/queryAllGoodsCount', controller.custom.shoppingCarts.queryAllGoodsCount);
 };

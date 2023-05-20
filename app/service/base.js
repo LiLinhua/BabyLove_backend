@@ -26,6 +26,9 @@ class BaseService extends Service {
   async destroy(where = {}, options = {}) {
     return await this.model.destroy({ where, ...options });
   }
+  async count(where = {}, options = {}) {
+    return await this.model.count({ where, ...options });
+  }
 }
 
 module.exports = BaseService;

@@ -63,13 +63,14 @@ class ShoppingCartsController extends Controller {
       }
       // 检查库存
       let newGoodsCount = buyCount;
+      let isOutOfStock = false;
       if (goods.goodsInventory < buyCount) {
         newGoodsCount = goods.goodsInventory;
+        isOutOfStock = true;
       }
       // 更新购买数量
       await ctx.service.goodsShoppingCartsRelations.update({ buyCount: newGoodsCount }, { shoppingCartCode, goodsCode });
-      const isOutOfStock = newGoodsCount < buyCount;
-      return ctx.helper.responseSuccess({ data: newGoodsCount, message: isOutOfStock ? '该商品库存不足' : '成功', errCode: 'OUT_OF_STOCK' });
+      return ctx.helper.responseSuccess({ data: newGoodsCount, message: isOutOfStock ? '该商品库存不足' : '成功', errCode: isOutOfStock ? 'OUT_OF_STOCK' : undefined });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
@@ -174,6 +175,23 @@ class ShoppingCartsController extends Controller {
       shoppingCart.goods = goods;
 
       return ctx.helper.responseSuccess({ data: shoppingCart });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  async queryAllGoodsCount() {
+    const { ctx } = this;
+    const { shoppingCartCode } = ctx.query;
+
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '购物车编码不能为空' });
+    }
+
+    try {
+      const data = await ctx.service.goodsShoppingCartsRelations.count({ shoppingCartCode });
+
+      return ctx.helper.responseSuccess({ data });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
