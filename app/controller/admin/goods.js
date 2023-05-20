@@ -99,6 +99,9 @@ class GoodsController extends Controller {
       await ctx.service.goods.update({ goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsCatalog }, { goodsCode }, { transaction });
 
       // 更新商品图片
+      // 移除现有的商品图片
+      await ctx.service.goodsPicturesRelations.destroy({ goodsCode }, { transaction });
+      // 重新添加商品图片
       const goodsPictures = goodsPictureCodes.map(code => {
         return { pictureCode: code, goodsCode };
       });
