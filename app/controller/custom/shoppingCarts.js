@@ -135,6 +135,7 @@ class ShoppingCartsController extends Controller {
           attributes: {
             exclude: [ 'deletedAt' ],
           },
+          order: [['updatedAt', 'desc']],
           through: {
             attributes: [],
           },

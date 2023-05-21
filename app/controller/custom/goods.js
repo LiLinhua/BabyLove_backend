@@ -11,6 +11,7 @@ class GoodsController extends Controller {
         attributes: {
           exclude: [ 'deletedAt' ],
         },
+        order: [['updatedAt', 'desc']],
         include: [{
           model: app.model.GoodsPictures,
           as: 'pictures',

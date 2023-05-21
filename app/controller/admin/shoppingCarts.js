@@ -10,6 +10,7 @@ class ShoppingCartsController extends Controller {
       // 查询购物车与商品信息
       const shoppingCarts = await ctx.service.shoppingCarts.findAll({}, {
         attributes: [ 'shoppingCartCode' ],
+        order: [['updatedAt', 'desc']],
         include: [{
           model: app.model.Goods,
           as: 'goods',
@@ -19,6 +20,7 @@ class ShoppingCartsController extends Controller {
           through: {
             attributes: [],
           },
+          order: [['updatedAt', 'desc']],
           include: [{
             model: app.model.GoodsPictures,
             as: 'pictures',
@@ -202,6 +204,7 @@ class ShoppingCartsController extends Controller {
           attributes: {
             exclude: [ 'deletedAt' ],
           },
+          order: [['updatedAt', 'desc']],
           through: {
             attributes: [],
           },

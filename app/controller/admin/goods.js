@@ -123,12 +123,13 @@ class GoodsController extends Controller {
     try {
       const data = await ctx.service.goods.findAll({}, {
         attributes: {
-          exclude: [ 'deletedAt' ],
+          exclude: ['deletedAt'],
         },
+        order: [['updatedAt', 'desc']],
         include: [{
           model: app.model.GoodsPictures,
           as: 'pictures',
-          attributes: [ 'pictureCode', 'pictureUrl' ],
+          attributes: ['pictureCode', 'pictureUrl'],
           through: {
             attributes: [],
           },
@@ -150,12 +151,12 @@ class GoodsController extends Controller {
     try {
       const data = await ctx.service.goods.findOne({ goodsCode }, {
         attributes: {
-          exclude: [ 'deletedAt' ],
+          exclude: ['deletedAt'],
         },
         include: [{
           model: app.model.GoodsPictures,
           as: 'pictures',
-          attributes: [ 'pictureCode', 'pictureUrl' ],
+          attributes: ['pictureCode', 'pictureUrl'],
           through: {
             attributes: [],
           },
