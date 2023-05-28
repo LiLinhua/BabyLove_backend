@@ -14,6 +14,7 @@ module.exports = app => {
     deletedAt: { field: 'deleted_at', type: DATE, allowNull: true, comment: '删除时间' },
   }, {
     timestamp: true,
+    paranoid: true,
   });
 
   return GoodsShoppingCartsRelations;
