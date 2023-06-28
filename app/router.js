@@ -5,7 +5,7 @@
  */
 module.exports = app => {
   const { router, controller } = app;
-  router.get('/', controller.index.index);
+  // router.get('/', controller.index.index);
   router.get(/^(?=\/view\/)/, controller.index.index);
 
   // 登录
