@@ -10,7 +10,7 @@ class ShoppingCartsController extends Controller {
       // 查询购物车与商品信息
       const shoppingCarts = await ctx.service.shoppingCarts.findAll({}, {
         attributes: [ 'shoppingCartCode' ],
-        order: [['updatedAt', 'desc']],
+        order: [[ 'updatedAt', 'desc' ]],
         include: [{
           model: app.model.Goods,
           as: 'goods',
@@ -20,7 +20,7 @@ class ShoppingCartsController extends Controller {
           through: {
             attributes: [],
           },
-          order: [['updatedAt', 'desc']],
+          order: [[ 'updatedAt', 'desc' ]],
           include: [{
             model: app.model.GoodsPictures,
             as: 'pictures',
@@ -78,6 +78,23 @@ class ShoppingCartsController extends Controller {
     try {
       const shoppingCart = await ctx.service.shoppingCarts.create({ shoppingCartCode: uuidv4() });
       return ctx.helper.responseSuccess({ data: shoppingCart });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  async queryAllGoodsCount() {
+    const { ctx } = this;
+    const { shoppingCartCode } = ctx.query;
+
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '购物车编码不能为空' });
+    }
+
+    try {
+      const data = await ctx.service.goodsShoppingCartsRelations.count({ shoppingCartCode });
+
+      return ctx.helper.responseSuccess({ data });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
@@ -204,7 +221,7 @@ class ShoppingCartsController extends Controller {
           attributes: {
             exclude: [ 'deletedAt' ],
           },
-          order: [['updatedAt', 'desc']],
+          order: [[ 'updatedAt', 'desc' ]],
           through: {
             attributes: [],
           },

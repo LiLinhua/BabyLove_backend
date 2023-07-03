@@ -25,6 +25,7 @@ module.exports = app => {
   router.post('/admin/shoppingCarts/batchRemoveGoods', controller.admin.shoppingCarts.batchRemoveGoods);
   router.post('/admin/shoppingCarts/batchUpdateSelected', controller.admin.shoppingCarts.batchUpdateSelected);
   router.post('/admin/shoppingCarts/updateBuyCount', controller.admin.shoppingCarts.updateBuyCount);
+  router.get('/admin/shoppingCarts/queryAllGoodsCount', controller.admin.shoppingCarts.queryAllGoodsCount);
   router.post('/admin/goodsPictures/addGoodsPictures', controller.admin.goodsPictures.addGoodsPictures);
 
 
