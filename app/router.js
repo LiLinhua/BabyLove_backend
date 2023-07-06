@@ -27,6 +27,8 @@ module.exports = app => {
   router.post('/admin/shoppingCarts/updateBuyCount', controller.admin.shoppingCarts.updateBuyCount);
   router.get('/admin/shoppingCarts/queryAllGoodsCount', controller.admin.shoppingCarts.queryAllGoodsCount);
   router.post('/admin/goodsPictures/addGoodsPictures', controller.admin.goodsPictures.addGoodsPictures);
+  router.post('/admin/orders/queryAllOrders', controller.admin.orders.queryAllOrders);
+  router.post('/admin/orders/addOrder', controller.admin.orders.addOrder);
 
 
   // 客户侧
