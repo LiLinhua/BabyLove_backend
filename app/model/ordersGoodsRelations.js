@@ -3,7 +3,7 @@
 module.exports = app => {
   const { STRING, INTEGER, DATE, FLOAT } = app.Sequelize;
 
-  const OrdersGoodsRelations = app.model.define('orders_goods_relations', {
+  const OrdersGoodsRelations = app.model.define('ordersGoodsRelations', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     orderCode: { field: 'order_code', type: STRING(50), allowNull: false, comment: '订单编码' },
     goodsCode: { field: 'goods_code', type: STRING(50), allowNull: false, comment: '商品编码' },

@@ -3,7 +3,7 @@
 module.exports = app => {
   const { STRING, INTEGER, DATE, TEXT } = app.Sequelize;
 
-  const GoodsPictures = app.model.define('goods_pictures', {
+  const GoodsPictures = app.model.define('goodsPictures', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     pictureCode: { field: 'picture_code', type: STRING(50), allowNull: false, comment: '图片代码' },
     pictureUrl: { field: 'picture_url', type: TEXT, allowNull: false, comment: '图片地址' },
