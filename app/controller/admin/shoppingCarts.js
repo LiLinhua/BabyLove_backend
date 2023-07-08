@@ -3,6 +3,9 @@ const { v4: uuidv4 } = require('uuid');
 const { Controller } = require('egg');
 
 class ShoppingCartsController extends Controller {
+  /**
+   * 查询所有购物车
+   */
   async queryAllShoppingCarts() {
     const { ctx, app } = this;
 
@@ -72,6 +75,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 添加购物车
+   */
   async addShoppingCart() {
     const { ctx } = this;
 
@@ -100,6 +106,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 添加购物车商品
+   */
   async addGoods() {
     const { ctx } = this;
     const { shoppingCartCode, goodsCode, buyCount } = ctx.request.body;
@@ -138,6 +147,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 更新购物车商品数量
+   */
   async updateBuyCount() {
     const { ctx } = this;
     const { shoppingCartCode, goodsCode, buyCount } = ctx.request.body;
@@ -173,6 +185,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 批量选择购物车商品
+   */
   async batchUpdateSelected() {
     const { ctx } = this;
     const { shoppingCartCode, goodsCodes, selected } = ctx.request.body;
@@ -204,6 +219,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 查询购物车商品列表
+   */
   async queryAllGoods() {
     const { ctx, app } = this;
     const { shoppingCartCode } = ctx.query;
@@ -267,6 +285,9 @@ class ShoppingCartsController extends Controller {
     }
   }
 
+  /**
+   * 批量删除购物车商品
+   */
   async batchRemoveGoods() {
     const { ctx } = this;
 

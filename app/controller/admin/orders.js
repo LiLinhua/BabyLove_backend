@@ -2,6 +2,9 @@
 const { Controller } = require('egg');
 
 class OrdersController extends Controller {
+  /**
+   * 查询所有订单
+   */
   async queryAllOrders() {
     const { ctx, app } = this;
     const { Op } = ctx.model.Sequelize;
@@ -27,13 +30,13 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle' ],
-          where: {
-            [Op.or]: [
-              { goodsCode: { [Op.like]: '%' + keyword + '%' } },
-              { goodsTitle: { [Op.like]: '%' + keyword + '%' } },
-            ],
-          },
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          // where: {
+          //   [Op.or]: [
+          //     { goodsCode: { [Op.like]: '%' + keyword + '%' } },
+          //     { goodsTitle: { [Op.like]: '%' + keyword + '%' } },
+          //   ],
+          // },
           through: {
             attributes: [ 'buyCount', 'goodsPrice' ],
           },
@@ -55,6 +58,49 @@ class OrdersController extends Controller {
     }
   }
 
+  /**
+   * 查询订单详情
+   */
+  async queryOrderDetails() {
+    const { ctx, app } = this;
+    const { orderCode } = ctx.request.body;
+
+    if (!orderCode) {
+      return ctx.helper.responseError({ message: '订单编码不能为空' });
+    }
+
+    try {
+      // 查询购物车与商品信息
+      const order = await ctx.service.orders.findOne({ orderCode }, {
+        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'status', 'createdAt' ],
+        include: [{
+          model: app.model.Goods,
+          as: 'goods',
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          through: {
+            attributes: [ 'buyCount', 'goodsPrice' ],
+          },
+          order: [[ 'updatedAt', 'desc' ]],
+          include: [{
+            model: app.model.GoodsPictures,
+            as: 'pictures',
+            attributes: [ 'pictureCode', 'pictureUrl' ],
+            through: {
+              attributes: [],
+            },
+          }],
+        }],
+      });
+
+      return ctx.helper.responseSuccess({ data: order });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  /**
+   * 添加订单
+   */
   async addOrder() {
     const { ctx, app } = this;
     const { shoppingCartCode, expressWay, expressCode, orderStatus } = ctx.request.body;
@@ -149,7 +195,11 @@ class OrdersController extends Controller {
     }
   }
 
-
+  /**
+     * 检查订单
+     * @param orderCode
+     * @param orderStatus
+     */
   async checkOrderBeforeUpdate(orderCode, orderStatus) {
     const { ctx, app } = this;
 
@@ -161,7 +211,7 @@ class OrdersController extends Controller {
     try {
       // 查询订单信息
       const order = await ctx.service.orders.findOne({ orderCode }, {
-        attributes: [ 'orderCode', 'expressWay', 'expressCode', 'status' ],
+        attributes: [ 'orderCode', 'expressWay', 'expressCode', 'status', 'shoppingCartCode' ],
         include: [{
           model: app.model.Goods,
           as: 'goods',
@@ -208,12 +258,15 @@ class OrdersController extends Controller {
     }
   }
 
+  /**
+   * 更新商订单基础信息
+   */
   async updateOrderBaseInfo() {
     const { ctx } = this;
     const { orderCode, orderStatus, expressWay, expressCode } = ctx.request.body;
 
-    // 检查参数
-    if (!orderStatus && !expressWay && !expressCode) {
+    // // 检查参数
+    if (!orderStatus && expressWay === undefined && expressCode === undefined) {
       return ctx.helper.responseError({ message: '参数不能为空，请检查' });
     }
     // 检查订单基础信息
@@ -231,7 +284,7 @@ class OrdersController extends Controller {
 
       // 更新订单基础信息
       await ctx.service.orders.update({
-        status: orderStatus,
+        status: orderStatus || order.status,
         expressWay: expressWay || order.expressWay,
         expressCode: expressCode || order.expressCode,
       }, { orderCode: order.orderCode });
@@ -242,6 +295,73 @@ class OrdersController extends Controller {
     }
   }
 
+  /**
+   * 添加商品
+   */
+  async addOrderGoods() {
+    const { ctx } = this;
+    const { orderCode, goodsCode, buyCount } = ctx.request.body;
+
+    // 检查订单基础信息
+    const checkResult = await this.checkOrderBeforeUpdate(orderCode);
+    if (!checkResult.success) {
+      return ctx.helper.responseError({ message: checkResult.message });
+    }
+    // 检查参数
+    if (!goodsCode) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+    if (typeof buyCount !== 'number' || buyCount < 1) {
+      return ctx.helper.responseError({ message: '购买数量只能是大于0的数字' });
+    }
+
+    try {
+      const { order } = checkResult;
+
+      // 校验订单状态，仅待付款状态下可以修改商品信息
+      const { WAIT_PAY } = ctx.service.orders.status;
+      if (order.status !== WAIT_PAY) {
+        return ctx.helper.responseError({ message: '订单已付款，不允许修改' });
+      }
+
+      // 更新商品数量
+      const orderGoods = order.goods.find(goodsItem => goodsItem.goodsCode === goodsCode);
+      if (!orderGoods) {
+        // 商品不存在，则添加
+        const goods = await ctx.service.goods.findOne({ goodsCode });
+        if (!goods) {
+          return ctx.helper.responseError({ message: '该商品已下架' });
+        }
+        // 校验商品库存
+        if (goods.goodsInventory < buyCount) {
+          return ctx.helper.responseError({ message: '该商品库存不足' });
+        }
+        // 添加订单商品
+        await ctx.service.ordersGoodsRelations.create({
+          orderCode,
+          goodsCode: goods.goodsCode,
+          shoppingCartCode: order.shoppingCartCode,
+          goodsPrice: goods.goodsPrice,
+          buyCount,
+        });
+      } else {
+        // 商品存在，则修改
+        // 校验商品库存
+        if (orderGoods.goodsInventory < buyCount) {
+          return ctx.helper.responseError({ message: '该商品库存不足' });
+        }
+        await ctx.service.ordersGoodsRelations.update({ buyCount }, { orderCode, goodsCode });
+      }
+
+      return ctx.helper.responseSuccess({ data: true });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  /**
+   * 更新商品信息
+   */
   async updateOrderGoodsBuyCount() {
     const { ctx } = this;
     const { orderCode, goodsCode, buyCount } = ctx.request.body;
@@ -251,7 +371,7 @@ class OrdersController extends Controller {
     if (!checkResult.success) {
       return ctx.helper.responseError({ message: checkResult.message });
     }
-    // 检查物流参数
+    // 检查参数
     if (!goodsCode) {
       return ctx.helper.responseError({ message: '商品编码不能为空' });
     }

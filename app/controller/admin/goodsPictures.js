@@ -2,6 +2,9 @@
 const { Controller } = require('egg');
 
 class GoodsPicturesController extends Controller {
+  /**
+   * 添加商品图片
+   */
   async addGoodsPictures() {
     const { ctx } = this;
     const { files } = ctx.request;

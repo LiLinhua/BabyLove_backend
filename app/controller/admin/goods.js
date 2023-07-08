@@ -4,6 +4,9 @@ const { Controller } = require('egg');
 const goodsCatalogEnum = require('../../constants/goods');
 
 class GoodsController extends Controller {
+  /**
+   * 添加商品
+   */
   async addGoods() {
     const { ctx } = this;
     const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
@@ -54,6 +57,9 @@ class GoodsController extends Controller {
     }
   }
 
+  /**
+   * 更新商品
+   */
   async updateGoods() {
     const { ctx } = this;
     const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog, goodsInventory, goodsPictureCodes } = ctx.request.body;
@@ -117,19 +123,22 @@ class GoodsController extends Controller {
     }
   }
 
+  /**
+   * 查询商品列表
+   */
   async queryAllGoods() {
     const { ctx, app } = this;
 
     try {
       const data = await ctx.service.goods.findAll({}, {
         attributes: {
-          exclude: ['deletedAt'],
+          exclude: [ 'deletedAt' ],
         },
-        order: [['updatedAt', 'desc']],
+        order: [[ 'updatedAt', 'desc' ]],
         include: [{
           model: app.model.GoodsPictures,
           as: 'pictures',
-          attributes: ['pictureCode', 'pictureUrl'],
+          attributes: [ 'pictureCode', 'pictureUrl' ],
           through: {
             attributes: [],
           },
@@ -141,6 +150,9 @@ class GoodsController extends Controller {
     }
   }
 
+  /**
+   * 查询商品详情
+   */
   async queryGoodsDetails() {
     const { ctx, app } = this;
     const { goodsCode } = ctx.query;
@@ -151,12 +163,12 @@ class GoodsController extends Controller {
     try {
       const data = await ctx.service.goods.findOne({ goodsCode }, {
         attributes: {
-          exclude: ['deletedAt'],
+          exclude: [ 'deletedAt' ],
         },
         include: [{
           model: app.model.GoodsPictures,
           as: 'pictures',
-          attributes: ['pictureCode', 'pictureUrl'],
+          attributes: [ 'pictureCode', 'pictureUrl' ],
           through: {
             attributes: [],
           },
@@ -168,6 +180,9 @@ class GoodsController extends Controller {
     }
   }
 
+  /**
+   * 删除商品
+   */
   async removeGoods() {
     const { ctx } = this;
     const { goodsCode } = ctx.request.body;
