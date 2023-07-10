@@ -18,7 +18,7 @@ class OrdersController extends Controller {
     try {
       // 查询购物车与商品信息
       const orders = await ctx.service.orders.findAll({}, {
-        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'status', 'createdAt' ],
+        // attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'status', 'createdAt' ],
         order: [[ 'updatedAt', 'desc' ]],
         where: {
           [Op.or]: [
@@ -51,6 +51,34 @@ class OrdersController extends Controller {
           }],
         }],
       });
+
+      // 待付款的订单，需要检查商品价格是否有变动，下单时要以商品当前价格下单
+      const isPriceChangeMap = {};
+      const needUpdateOrderCodes = [];
+      const needUpdateOrders = [];
+      for (let i = 0; i < orders.length; i++) {
+        const order = orders[i];
+        if (order.status !== ctx.service.orders.status.WAIT_PAY) {
+          continue;
+        }
+        let totalPrice = 0;
+        for (let j = 0; j < order.goods.length; j++) {
+          totalPrice += order.goods[j].goodsPrice * order.goods[j].ordersGoodsRelations.buyCount;
+          if (order.goods[j].goodsPrice !== order.goods[j].ordersGoodsRelations.goodsPrice) {
+            isPriceChangeMap[order.orderCode] = true;
+          }
+          if (j === order.goods.length - 1 && isPriceChangeMap[order.orderCode] && needUpdateOrderCodes.indexOf(order.orderCode) < 0 && order.totalPrice !== totalPrice) {
+            order.totalPrice = totalPrice;
+            needUpdateOrders.push(order.toJSON());
+            needUpdateOrderCodes.push(order.orderCode);
+          }
+        }
+      }
+
+      // 待付款的订单，价格变动时，重新更新订单总价
+      if (needUpdateOrders.length > 0) {
+        await ctx.service.orders.bulkCreate(needUpdateOrders, { updateOnDuplicate: [ 'totalPrice' ] });
+      }
 
       return ctx.helper.responseSuccess({ data: orders });
     } catch (error) {
@@ -91,6 +119,23 @@ class OrdersController extends Controller {
           }],
         }],
       });
+
+      // 待付款的订单，需要检查商品价格是否有变动，下单时要以商品当前价格下单
+      if (order.status === ctx.service.orders.status.WAIT_PAY) {
+        let isPriceChange = false;
+        let totalPrice = 0;
+        for (let i = 0; i < order.goods.length; i++) {
+          if (order.goods[i].goodsPrice !== order.goods[i].ordersGoodsRelations.goodsPrice) {
+            isPriceChange = true;
+          }
+          totalPrice += order.goods[i].goodsPrice * order.goods[i].ordersGoodsRelations.buyCount;
+        }
+        // 价格变动时，重新更新订单总价
+        if (isPriceChange) {
+          await ctx.service.orders.update({ totalPrice }, { orderCode: order.orderCode });
+          order.totalPrice = totalPrice;
+        }
+      }
 
       return ctx.helper.responseSuccess({ data: order });
     } catch (error) {
@@ -315,6 +360,7 @@ class OrdersController extends Controller {
       return ctx.helper.responseError({ message: '购买数量只能是大于0的数字' });
     }
 
+    let transaction;
     try {
       const { order } = checkResult;
 
@@ -324,18 +370,23 @@ class OrdersController extends Controller {
         return ctx.helper.responseError({ message: '订单已付款，不允许修改' });
       }
 
+      // 检查商品是否已下架
+      const goods = await ctx.service.goods.findOne({ goodsCode });
+      if (!goods) {
+        return ctx.helper.responseError({ message: '该商品已下架' });
+      }
+
+      // 校验商品库存
+      if (goods.goodsInventory < buyCount) {
+        return ctx.helper.responseError({ message: '该商品库存不足' });
+      }
+
+      // 启动事务
+      transaction = await ctx.model.transaction();
+
       // 更新商品数量
       const orderGoods = order.goods.find(goodsItem => goodsItem.goodsCode === goodsCode);
       if (!orderGoods) {
-        // 商品不存在，则添加
-        const goods = await ctx.service.goods.findOne({ goodsCode });
-        if (!goods) {
-          return ctx.helper.responseError({ message: '该商品已下架' });
-        }
-        // 校验商品库存
-        if (goods.goodsInventory < buyCount) {
-          return ctx.helper.responseError({ message: '该商品库存不足' });
-        }
         // 添加订单商品
         await ctx.service.ordersGoodsRelations.create({
           orderCode,
@@ -343,18 +394,36 @@ class OrdersController extends Controller {
           shoppingCartCode: order.shoppingCartCode,
           goodsPrice: goods.goodsPrice,
           buyCount,
-        });
+        }, { transaction });
       } else {
         // 商品存在，则修改
-        // 校验商品库存
-        if (orderGoods.goodsInventory < buyCount) {
-          return ctx.helper.responseError({ message: '该商品库存不足' });
-        }
-        await ctx.service.ordersGoodsRelations.update({ buyCount }, { orderCode, goodsCode });
+        await ctx.service.ordersGoodsRelations.update({ buyCount, goodsPrice: goods.goodsPrice }, { orderCode, goodsCode }, { transaction });
       }
+
+      // 实时获取商品信息，保证价格是实时的
+      const relations = await ctx.service.ordersGoodsRelations.findAll({ orderCode }, { transaction });
+      const goodses = await ctx.service.goods.findAll({ goodsCode: relations.map(relation => relation.goodsCode) }, { transaction });
+      const goodsPriceMap = {};
+      goodses.forEach(goods => {
+        goodsPriceMap[goods.goodsCode] = goods;
+      });
+      // 更新订单总价格、总数量等信息
+      let totalCount = 0;
+      let totalPrice = 0;
+      relations.forEach(relation => {
+        const realBuyCount = relation.goodsCode === goodsCode ? buyCount : relation.buyCount;
+        totalCount += realBuyCount;
+        totalPrice += goodsPriceMap[relation.goodsCode].goodsPrice * realBuyCount;
+      });
+      await ctx.service.orders.update({ totalCount, totalPrice }, { orderCode }, { transaction });
+
+      // 提交事务
+      transaction.commit();
 
       return ctx.helper.responseSuccess({ data: true });
     } catch (error) {
+      // 回滚事务
+      transaction.rollback();
       return ctx.helper.responseError({}, error);
     }
   }
@@ -379,6 +448,7 @@ class OrdersController extends Controller {
       return ctx.helper.responseError({ message: '购买数量只能是数字' });
     }
 
+    let transaction;
     try {
       const { order } = checkResult;
 
@@ -393,27 +463,52 @@ class OrdersController extends Controller {
         return ctx.helper.responseError({ message: '订单已付款，不允许修改' });
       }
 
+      // 检查商品
+      const goods = await ctx.service.goods.findOne({ goodsCode });
+
+      // 启动事务
+      transaction = await ctx.model.transaction();
+
       // 可修改商品信息时，变更购买的商品和商品数量
       if (buyCount < 1) {
         // 购买数量小于 1 时删除商品
-        await ctx.service.ordersGoodsRelations.destroy({ orderCode, goodsCode });
-        return ctx.helper.responseSuccess({ data: true });
+        await ctx.service.ordersGoodsRelations.destroy({ orderCode, goodsCode }, { transaction });
+      } else {
+        // 更新商品数量
+        if (!goods) {
+          return ctx.helper.responseError({ message: '该商品已下架' });
+        }
+        // 校验商品库存
+        if (goods.goodsInventory < buyCount) {
+          return ctx.helper.responseError({ message: '该商品库存不足' });
+        }
+        await ctx.service.ordersGoodsRelations.update({ buyCount }, { orderCode, goodsCode }, { transaction });
       }
-      // 更新商品数量
-      const orderGoods = order.goods.find(goodsItem => goodsItem.goodsCode === goodsCode);
-      if (!orderGoods) {
-        // 商品不存在或者已下架时，移除订单中的商品后提示
-        await ctx.service.ordersGoodsRelations.destroy({ orderCode, goodsCode });
-        return ctx.helper.responseError({ message: '该商品已下架' });
-      }
-      // 校验商品库存
-      if (orderGoods.goodsInventory < buyCount) {
-        return ctx.helper.responseError({ message: '该商品库存不足' });
-      }
-      await ctx.service.ordersGoodsRelations.update({ buyCount }, { orderCode, goodsCode });
+
+      // 实时获取商品信息，保证价格是实时的
+      const relations = await ctx.service.ordersGoodsRelations.findAll({ orderCode }, { transaction });
+      const goodses = await ctx.service.goods.findAll({ goodsCode: relations.map(relation => relation.goodsCode) }, { transaction });
+      const goodsPriceMap = {};
+      goodses.forEach(goods => {
+        goodsPriceMap[goods.goodsCode] = goods;
+      });
+      // 更新订单总价格、总数量等信息
+      let totalCount = 0;
+      let totalPrice = 0;
+      relations.forEach(relation => {
+        const realBuyCount = relation.goodsCode === goodsCode ? buyCount : relation.buyCount;
+        totalCount += realBuyCount;
+        totalPrice += goodsPriceMap[relation.goodsCode].goodsPrice * realBuyCount;
+      });
+      await ctx.service.orders.update({ totalCount, totalPrice }, { orderCode }, { transaction });
+
+      // 提交事务
+      transaction.commit();
 
       return ctx.helper.responseSuccess({ data: true });
     } catch (error) {
+      // 回滚事务
+      transaction.rollback();
       return ctx.helper.responseError({}, error);
     }
   }
