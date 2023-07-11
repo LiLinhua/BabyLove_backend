@@ -197,7 +197,7 @@ class OrdersController extends Controller {
           return ctx.helper.responseError({ message: `您选购的商品“${goodsTitle}”库存不足` });
         }
         totalCount += goodsShoppingCartsRelations.buyCount;
-        totalPrice += goodsPrice;
+        totalPrice += goodsPrice * goodsShoppingCartsRelations.buyCount;
       }
 
       // 启动事务
@@ -244,8 +244,9 @@ class OrdersController extends Controller {
      * 检查订单
      * @param orderCode
      * @param orderStatus
+     * @param isCheckStatus
      */
-  async checkOrderBeforeUpdate(orderCode, orderStatus) {
+  async checkOrderBeforeUpdate(orderCode, orderStatus, isCheckStatus = true) {
     const { ctx, app } = this;
 
     // 参数校验
@@ -277,11 +278,13 @@ class OrdersController extends Controller {
 
       // 校验订单状态，待收货、已完成、已取消时不可修改任何信息
       const { WAIT_PAY, WAIT_SEND, WAIT_GET, FINISHED, CANCELED } = ctx.service.orders.status;
-      if (WAIT_GET === order.status) {
-        return { message: '订单已发货，不可修改' };
-      }
-      if ([ FINISHED, CANCELED ].includes(order.status)) {
-        return { message: '订单已完成，不可修改' };
+      if (isCheckStatus) {
+        if (WAIT_GET === order.status) {
+          return { message: '订单已发货，不可修改' };
+        }
+        if ([ FINISHED, CANCELED ].includes(order.status)) {
+          return { message: '订单已完成，不可修改' };
+        }
       }
 
       // 确保订单状态不可逆
@@ -315,7 +318,7 @@ class OrdersController extends Controller {
       return ctx.helper.responseError({ message: '参数不能为空，请检查' });
     }
     // 检查订单基础信息
-    const checkResult = await this.checkOrderBeforeUpdate(orderCode, orderStatus);
+    const checkResult = await this.checkOrderBeforeUpdate(orderCode, orderStatus, false);
     if (!checkResult || !checkResult.success) {
       return ctx.helper.responseError({ message: checkResult.message });
     }
