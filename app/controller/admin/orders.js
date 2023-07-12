@@ -262,9 +262,9 @@ class OrdersController extends Controller {
           model: app.model.Goods,
           as: 'goods',
           attributes: [ 'goodsCode', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
-          through: {
-            attributes: [ 'buyCount' ],
-          },
+          // through: {
+          //   attributes: [ 'buyCount' ],
+          // },
         }],
       });
 
@@ -327,18 +327,42 @@ class OrdersController extends Controller {
       return ctx.helper.responseError({ message: '订单状态不合法，请检查' });
     }
 
+    let transaction;
     try {
       const { order } = checkResult;
+
+      // 启动事务
+      transaction = await ctx.model.transaction();
 
       // 更新订单基础信息
       await ctx.service.orders.update({
         status: orderStatus || order.status,
         expressWay: expressWay || order.expressWay,
         expressCode: expressCode || order.expressCode,
-      }, { orderCode: order.orderCode });
+      }, { orderCode: order.orderCode }, { transaction });
+
+      // 更新商品库存
+      if (order.status === ctx.service.orders.status.WAIT_PAY && orderStatus !== order.status) {
+        const needUpdateGoodsCodes = [];
+        const goodsInventoryMap = {};
+        order.goods.forEach(goodsItem => {
+          needUpdateGoodsCodes.push(goodsItem.goodsCode);
+          goodsInventoryMap[goodsItem.goodsCode] = goodsItem.goodsInventory - goodsItem.ordersGoodsRelations.buyCount;
+        });
+        const needUpdateGoods = await ctx.service.goods.findAll({ goodsCode: needUpdateGoodsCodes }, { raw: true });
+        needUpdateGoods.forEach(needUpdateGoodsItem => {
+          needUpdateGoodsItem.goodsInventory = goodsInventoryMap[needUpdateGoodsItem.goodsCode];
+        });
+        await ctx.service.goods.bulkCreate(needUpdateGoods, { updateOnDuplicate: [ 'goodsInventory' ], transaction });
+      }
+
+      // 提交事务
+      transaction.commit();
 
       return ctx.helper.responseSuccess({ data: true });
     } catch (error) {
+      // 回滚事务
+      transaction.rollback();
       return ctx.helper.responseError({}, error);
     }
   }
@@ -512,6 +536,34 @@ class OrdersController extends Controller {
     } catch (error) {
       // 回滚事务
       transaction.rollback();
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  /**
+   * 删除订单
+   */
+  async removeOrder() {
+    const { ctx } = this;
+    const { orderCode } = ctx.request.body;
+
+    // 检查参数
+    if (!orderCode) {
+      return ctx.helper.responseError({ message: '订单编码不能为空' });
+    }
+
+    try {
+      // 校验订单是否存在
+      const order = await ctx.service.orders.findOne({ orderCode });
+      if (!order) {
+        return ctx.helper.responseError({ message: '订单不存在' });
+      }
+
+      // 删除订单
+      await ctx.service.orders.destroy({ orderCode });
+
+      return ctx.helper.responseSuccess({ data: true });
+    } catch (error) {
       return ctx.helper.responseError({}, error);
     }
   }
