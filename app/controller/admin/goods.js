@@ -128,9 +128,26 @@ class GoodsController extends Controller {
    */
   async queryAllGoods() {
     const { ctx, app } = this;
+    const { Op } = ctx.model.Sequelize;
+    let { keyword, goodsCatalog } = ctx.request.query;
+    if (keyword && typeof keyword === 'string') {
+      keyword = keyword.trim();
+    } else {
+      keyword = '';
+    }
 
     try {
-      const data = await ctx.service.goods.findAll({}, {
+      const where = {
+        [Op.or]: [
+          { goodsCode: { [Op.like]: '%' + keyword + '%' } },
+          { goodsTitle: { [Op.like]: '%' + keyword + '%' } },
+          { goodsSubtitle: { [Op.like]: '%' + keyword + '%' } },
+        ],
+      };
+      if (goodsCatalog && typeof goodsCatalog === 'string') {
+        where.goodsCatalog = goodsCatalog.split(',');
+      }
+      const data = await ctx.service.goods.findAll(where, {
         attributes: {
           exclude: [ 'deletedAt' ],
         },

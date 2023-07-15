@@ -34,6 +34,10 @@ module.exports = app => {
   router.post('/admin/orders/updateOrderGoodsBuyCount', controller.admin.orders.updateOrderGoodsBuyCount);
   router.post('/admin/orders/addOrderGoods', controller.admin.orders.addOrderGoods);
   router.post('/admin/orders/removeOrder', controller.admin.orders.removeOrder);
+  router.post('/admin/catalogs/queryAllCatalogs', controller.admin.catalogs.queryCatalogList);
+  router.post('/admin/catalogs/createCatalog', controller.admin.catalogs.createCatalog);
+  router.post('/admin/catalogs/updateCatalog', controller.admin.catalogs.updateCatalog);
+  router.post('/admin/catalogs/removeCatalog', controller.admin.catalogs.removeCatalog);
 
   // 客户侧
   router.get('/custom/goods/queryAllGoods', controller.custom.goods.queryAllGoods);

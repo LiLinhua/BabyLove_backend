@@ -21,7 +21,7 @@ module.exports = app => {
   });
 
   Goods.associate = () => {
-    const { Goods, GoodsPictures, GoodsPicturesRelations, ShoppingCarts, GoodsShoppingCartsRelations } = app.model;
+    const { Goods, GoodsPictures, GoodsPicturesRelations, ShoppingCarts, GoodsShoppingCartsRelations, GoodsCatalogs } = app.model;
 
     // 商品与商品图片多对多
     Goods.belongsToMany(GoodsPictures, { as: 'pictures', through: GoodsPicturesRelations, foreignKey: 'goodsCode', sourceKey: 'goodsCode', otherKey: 'pictureCode' });
@@ -30,6 +30,9 @@ module.exports = app => {
     // 购物车与商品多对多
     ShoppingCarts.belongsToMany(Goods, { as: 'goods', through: GoodsShoppingCartsRelations, foreignKey: 'shoppingCartCode', sourceKey: 'shoppingCartCode', otherKey: 'goodsCode' });
     Goods.belongsToMany(ShoppingCarts, { as: 'shoppingCarts', through: GoodsShoppingCartsRelations, foreignKey: 'goodsCode', sourceKey: 'goodsCode', otherKey: 'shoppingCartCode' });
+
+    // 商品与分类一对多
+    Goods.belongsTo(GoodsCatalogs, { as: 'catalog', foreignKey: 'goodsCatalog', targetKey: 'catalogCode' });
   };
 
   return Goods;
