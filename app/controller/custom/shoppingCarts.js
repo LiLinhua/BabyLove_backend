@@ -79,6 +79,7 @@ class ShoppingCartsController extends Controller {
   async batchUpdateSelected() {
     const { ctx } = this;
     const { shoppingCartCode, goodsCodes, selected } = ctx.request.body;
+    const { Op } = ctx.model.Sequelize;
 
     if (!shoppingCartCode) {
       return ctx.helper.responseError({ message: '购物车编码不能为空' });
@@ -91,16 +92,21 @@ class ShoppingCartsController extends Controller {
     }
 
     try {
+      // 校验商品库存
+      const goods = await ctx.service.goods.findAll({ goodsCode: goodsCodes, goodsInventory: { [Op.gt]: 0 } });
+      const hasInventoryGoodsCodes = goods.map(item => item.goodsCode);
+
       // 查询关联记录
       const where = { shoppingCartCode };
-      if (goodsCodes.length) {
-        where.goodsCode = goodsCodes;
-      }
+      where.goodsCode = selected ? hasInventoryGoodsCodes : goodsCodes;
       const relations = await ctx.service.goodsShoppingCartsRelations.findAll(where, { raw: true });
       // 更新购买选择状态
       const newRelations = relations.map(relation => ({ ...relation, selected }));
       await ctx.service.goodsShoppingCartsRelations.bulkCreate(newRelations, { updateOnDuplicate: [ 'selected' ] });
 
+      if (selected && goods.length < 1 || goods.length !== goodsCodes.length) {
+        return ctx.helper.responseSuccess({ code: 'SOME_GOODS_EMPTY', message: `${goodsCodes.length > 1 && goodsCodes.length !== goods.length ? '部分' : '该'}商品库存不足` });
+      }
       return ctx.helper.responseSuccess();
     } catch (error) {
       return ctx.helper.responseError({}, error);
@@ -135,7 +141,7 @@ class ShoppingCartsController extends Controller {
           attributes: {
             exclude: [ 'deletedAt' ],
           },
-          order: [['updatedAt', 'desc']],
+          order: [[ 'updatedAt', 'desc' ]],
           through: {
             attributes: [],
           },

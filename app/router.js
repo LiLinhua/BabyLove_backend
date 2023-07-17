@@ -52,4 +52,5 @@ module.exports = app => {
   router.post('/custom/orders/queryAllOrders', controller.custom.orders.queryAllOrders);
   router.post('/custom/orders/queryOrderDetails', controller.custom.orders.queryOrderDetails);
   router.post('/custom/orders/cancelOrder', controller.custom.orders.cancelOrder);
+  router.post('/custom/catalogs/queryAllCatalogs', controller.custom.catalogs.queryCatalogList);
 };

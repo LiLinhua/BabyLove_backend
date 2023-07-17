@@ -331,6 +331,15 @@ class OrdersController extends Controller {
     try {
       const { order } = checkResult;
 
+      // 订单由待支付改为其他状态时，校验订单商品库存
+      if (orderStatus && order.status === ctx.service.orders.status.WAIT_PAY && orderStatus !== order.status && orderStatus !== ctx.service.orders.status.CANCELED) {
+        for (let i = 0; i < order.goods.length; i++) {
+          if (order.goods[i].goodsInventory < 1) {
+            return ctx.helper.responseError({ message: `商品“${order.goods[i].goodsTitle}”库存不足` });
+          }
+        }
+      }
+
       // 启动事务
       transaction = await ctx.model.transaction();
 
