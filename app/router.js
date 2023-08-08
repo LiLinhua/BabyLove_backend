@@ -9,8 +9,15 @@ module.exports = app => {
   router.get(/^(?=\/view\/)/, controller.index.index);
 
   // 登录
-  router.post('/user/login', controller.admin.user.login);
-  router.get('/user/logout', controller.admin.user.logout);
+  router.post('/user/login', controller.admin.users.login);
+  router.get('/user/logout', controller.admin.users.logout);
+
+  // 用户
+  router.post('/admin/users/addUser', controller.admin.users.addUser);
+  router.post('/admin/users/updateUser', controller.admin.users.updateUser);
+  router.post('/admin/users/queryAllUsers', controller.admin.users.queryAllUsers);
+  router.post('/admin/users/queryUserDetails', controller.admin.users.queryUserDetails);
+  router.post('/admin/users/removeUser', controller.admin.users.removeUser);
 
   // 管理后台
   router.post('/admin/goods/addGoods', controller.admin.goods.addGoods);
