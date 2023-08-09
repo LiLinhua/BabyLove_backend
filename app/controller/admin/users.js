@@ -2,6 +2,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { Controller } = require('egg');
 const bcrypt = require('bcryptjs');
+const moment = require('moment');
 
 class GoodsController extends Controller {
   /**
@@ -10,6 +11,7 @@ class GoodsController extends Controller {
    */
   async login() {
     const { ctx, app } = this;
+    const { Op } = app.Sequelize;
     const { userName, userPassword } = ctx.request.body;
 
     // 参数验证
@@ -26,7 +28,15 @@ class GoodsController extends Controller {
       }
 
       // 查询用户是否存在
-      const user = await ctx.service.users.findOne({ userName });
+      const user = await ctx.service.users.findOne({
+        [Op.or]: [{
+          userName,
+        }, {
+          userPhone: userName,
+        }],
+      }, {
+        raw: true,
+      });
       if (!user) {
         return ctx.helper.responseError({ message: '用户不存在或者已经被删除' });
       }
@@ -88,11 +98,29 @@ class GoodsController extends Controller {
     if (userPhone.trim().length !== 11 || isNaN(userPhone)) {
       return ctx.helper.responseError({ message: '用户手机号码只能是11位数字' });
     }
+    if (userBirthday && !moment(userBirthday).isValid()) {
+      return ctx.helper.responseError({ message: '用户出生日期格式不合法' });
+    }
+    if (userWeddingDate && !moment(userWeddingDate).isValid()) {
+      return ctx.helper.responseError({ message: '用户结婚纪念日格式不合法' });
+    }
 
     try {
+      // 判断用户名是否存在
+      let user = await ctx.service.users.findOne({ userName }, { attributes: [ 'userName' ], raw: true });
+      if (user) {
+        return ctx.helper.responseError({ message: '用户名已经存在' });
+      }
+
+      // 判断手机号是否存在
+      user = await ctx.service.users.findOne({ userPhone }, { attributes: [ 'userPhone' ], raw: true });
+      if (user) {
+        return ctx.helper.responseError({ message: '手机号已经存在' });
+      }
+
       // 创建用户
       userPassword = bcrypt.hashSync(userPassword, bcrypt.genSaltSync(10));
-      const result = await ctx.service.users.create({ userCode: uuidv4(), userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers });
+      const result = await ctx.service.users.create({ userCode: uuidv4(), userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers, isAdmin: 0 });
 
       // 响应前端
       return ctx.helper.responseSuccess({ data: result });
@@ -112,37 +140,41 @@ class GoodsController extends Controller {
     if (!userCode) {
       return ctx.helper.responseError({ message: '用户编码不能为空' });
     }
-    if (typeof userName === 'string' && userPassword.trim().length < 8) {
+    if (typeof userPassword === 'string' && userPassword.trim().length < 8) {
       return ctx.helper.responseError({ message: '用户密码不能少于 8 位' });
     }
-    if (typeof userName === 'string' && (userPhone.trim().length !== 11 || isNaN(userPhone))) {
+    if (typeof userPhone === 'string' && (userPhone.trim().length !== 11 || isNaN(userPhone))) {
       return ctx.helper.responseError({ message: '用户手机号码只能是11位数字' });
     }
 
     try {
       // 验证用户是否存在
-      const user = await ctx.service.users.findOne({ userCode });
+      const user = await ctx.service.users.findOne({ userCode }, { raw: true });
       if (!user) {
         return ctx.helper.responseError({ message: '用户不存在或者已经被删除' });
       }
 
-      // 验证参数
+      // 验证用户名
       if (typeof userName === 'string' && userName.trim().length > 0) {
         user.userName = userName;
-        const tempUser = await ctx.service.users.findOne({ userName }, { attributes: [ 'userCode' ] });
+        const tempUser = await ctx.service.users.findOne({ userName }, { attributes: [ 'userCode' ], raw: true });
         if (tempUser && user.userCode !== tempUser.userCode) {
           return ctx.helper.responseError({ message: '用户名已经存在' });
         }
       }
-      if (typeof userPassword === 'string' && userPassword.trim().length > 0) {
-        user.userPassword = bcrypt.hashSync(userPassword, bcrypt.genSaltSync(10));
-      }
+
+      // 验证手机号
       if (typeof userPhone === 'string' && userPhone.trim().length === 11) {
         user.userPhone = userPhone;
-        const tempUser = await ctx.service.users.findOne({ userPhone }, { attributes: [ 'userPhone' ] });
+        const tempUser = await ctx.service.users.findOne({ userPhone }, { attributes: [ 'userCode' ], raw: true });
         if (tempUser && user.userCode !== tempUser.userCode) {
           return ctx.helper.responseError({ message: '用户手机号已经存在' });
         }
+      }
+
+      // 加密密码
+      if (typeof userPassword === 'string' && userPassword.trim().length > 0) {
+        user.userPassword = bcrypt.hashSync(userPassword, bcrypt.genSaltSync(10));
       }
 
       // 补充参数
@@ -163,7 +195,7 @@ class GoodsController extends Controller {
       }
 
       // 更新用户信息
-      await ctx.service.users.update(user);
+      await ctx.service.users.update(user, { userCode: user.userCode });
 
       return ctx.helper.responseSuccess();
     } catch (error) {
@@ -205,9 +237,10 @@ class GoodsController extends Controller {
       }
       const data = await ctx.service.users.findAll(where, {
         attributes: {
-          exclude: [ 'deletedAt' ],
+          exclude: [ 'userPassword', 'deletedAt' ],
         },
         order,
+        raw: true,
       });
       return ctx.helper.responseSuccess({ data });
     } catch (error) {
@@ -228,8 +261,9 @@ class GoodsController extends Controller {
     try {
       const data = await ctx.service.users.findOne({ userCode }, {
         attributes: {
-          exclude: [ 'deletedAt' ],
+          exclude: [ 'userPassword', 'deletedAt' ],
         },
+        raw: true,
       });
       return ctx.helper.responseSuccess({ data });
     } catch (error) {
@@ -244,11 +278,21 @@ class GoodsController extends Controller {
     const { ctx } = this;
     const { userCode } = ctx.request.body;
 
+    // 参数校验
     if (!userCode) {
       return ctx.helper.responseError({ message: '用户编码不能为空' });
     }
 
     try {
+      const user = await ctx.service.users.findOne({ userCode }, {
+        attributes: [ 'userCode' ],
+        raw: true,
+      });
+
+      if (!user) {
+        return ctx.helper.responseError({ message: '用户不存在或者已经被删除' });
+      }
+
       await ctx.service.users.destroy({ userCode });
       return ctx.helper.responseSuccess();
     } catch (error) {
