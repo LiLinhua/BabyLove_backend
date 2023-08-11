@@ -134,16 +134,16 @@ class GoodsController extends Controller {
    */
   async updateUser() {
     const { ctx } = this;
-    const { userCode, userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers } = ctx.request.body;
+    const { userCode, userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers, isAdmin } = ctx.request.body;
 
     // 参数校验
     if (!userCode) {
       return ctx.helper.responseError({ message: '用户编码不能为空' });
     }
-    if (typeof userPassword === 'string' && userPassword.trim().length < 8) {
+    if (typeof userPassword === 'string' && userPassword && userPassword.trim().length < 8) {
       return ctx.helper.responseError({ message: '用户密码不能少于 8 位' });
     }
-    if (typeof userPhone === 'string' && (userPhone.trim().length !== 11 || isNaN(userPhone))) {
+    if (typeof userPhone === 'string' && userPhone && (userPhone.trim().length !== 11 || isNaN(userPhone))) {
       return ctx.helper.responseError({ message: '用户手机号码只能是11位数字' });
     }
 
@@ -155,7 +155,7 @@ class GoodsController extends Controller {
       }
 
       // 验证用户名
-      if (typeof userName === 'string' && userName.trim().length > 0) {
+      if (typeof userName === 'string' && userName && userName.trim().length > 0) {
         user.userName = userName;
         const tempUser = await ctx.service.users.findOne({ userName }, { attributes: [ 'userCode' ], raw: true });
         if (tempUser && user.userCode !== tempUser.userCode) {
@@ -164,7 +164,7 @@ class GoodsController extends Controller {
       }
 
       // 验证手机号
-      if (typeof userPhone === 'string' && userPhone.trim().length === 11) {
+      if (typeof userPhone === 'string' && userPhone && userPhone.trim().length === 11) {
         user.userPhone = userPhone;
         const tempUser = await ctx.service.users.findOne({ userPhone }, { attributes: [ 'userCode' ], raw: true });
         if (tempUser && user.userCode !== tempUser.userCode) {
@@ -173,7 +173,7 @@ class GoodsController extends Controller {
       }
 
       // 加密密码
-      if (typeof userPassword === 'string' && userPassword.trim().length > 0) {
+      if (typeof userPassword === 'string' && userPassword && userPassword.trim().length > 0) {
         user.userPassword = bcrypt.hashSync(userPassword, bcrypt.genSaltSync(10));
       }
 
@@ -193,6 +193,9 @@ class GoodsController extends Controller {
       if (userOthers) {
         user.userOthers = userOthers;
       }
+      if ([ 0, 1 ].includes(isAdmin)) {
+        user.isAdmin = isAdmin;
+      }
 
       // 更新用户信息
       await ctx.service.users.update(user, { userCode: user.userCode });
@@ -209,7 +212,7 @@ class GoodsController extends Controller {
   async queryAllUsers() {
     const { ctx } = this;
     const { Op } = ctx.model.Sequelize;
-    let { keyword, userBirthdaySort, userWeddingDateSort } = ctx.request.query;
+    let { keyword, userBirthdaySort, userWeddingDateSort } = ctx.request.body;
     if (keyword && typeof keyword === 'string') {
       keyword = keyword.trim();
     } else {
@@ -228,12 +231,12 @@ class GoodsController extends Controller {
           { userOthers: like },
         ],
       };
-      const order = [];
-      if (userBirthdaySort) {
-        order.push([ 'userBirthday', 'DESC' ]);
+      let order = [[ 'createdAt', 'DESC' ]];
+      if (userBirthdaySort === true) {
+        order = [[ 'userBirthday', 'DESC' ]];
       }
-      if (userWeddingDateSort) {
-        order.push([ 'userWeddingDate', 'DESC' ]);
+      if (userWeddingDateSort === true) {
+        order = [[ 'userWeddingDate', 'DESC' ]];
       }
       const data = await ctx.service.users.findAll(where, {
         attributes: {
