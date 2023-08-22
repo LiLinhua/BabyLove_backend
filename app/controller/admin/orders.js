@@ -49,6 +49,10 @@ class OrdersController extends Controller {
               attributes: [],
             },
           }],
+        }, {
+          model: app.model.Users,
+          as: 'user',
+          attributes: [ 'userCode', 'userName', 'userNickname', 'userPhone' ],
         }],
       });
 
@@ -100,7 +104,7 @@ class OrdersController extends Controller {
     try {
       // 查询购物车与商品信息
       const order = await ctx.service.orders.findOne({ orderCode }, {
-        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'status', 'createdAt' ],
+        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'expressAddress', 'userSignature', 'status', 'createdAt' ],
         include: [{
           model: app.model.Goods,
           as: 'goods',
@@ -117,6 +121,10 @@ class OrdersController extends Controller {
               attributes: [],
             },
           }],
+        }, {
+          model: app.model.Users,
+          as: 'user',
+          attributes: [ 'userCode', 'userName', 'userNickname', 'userPhone' ],
         }],
       });
 
@@ -148,7 +156,7 @@ class OrdersController extends Controller {
    */
   async addOrder() {
     const { ctx, app } = this;
-    const { shoppingCartCode, expressWay, expressCode, orderStatus } = ctx.request.body;
+    const { shoppingCartCode, expressWay, expressCode, expressAddress, orderStatus } = ctx.request.body;
 
     if (!shoppingCartCode) {
       return ctx.helper.responseError({ message: '购物车编码不能为空' });
@@ -210,6 +218,7 @@ class OrdersController extends Controller {
         shoppingCartCode,
         expressWay,
         expressCode,
+        expressAddress,
         totalCount,
         totalPrice,
         status: orderStatus || ctx.service.orders.status.WAIT_PAY,
@@ -311,10 +320,10 @@ class OrdersController extends Controller {
    */
   async updateOrderBaseInfo() {
     const { ctx } = this;
-    const { orderCode, orderStatus, expressWay, expressCode } = ctx.request.body;
+    const { orderCode, orderStatus, expressWay, expressCode, expressAddress, userCode, userSignature } = ctx.request.body;
 
-    // // 检查参数
-    if (!orderStatus && expressWay === undefined && expressCode === undefined) {
+    // 检查参数
+    if (!orderStatus && expressWay === undefined && expressCode === undefined && expressAddress === undefined && !userCode && !userSignature) {
       return ctx.helper.responseError({ message: '参数不能为空，请检查' });
     }
     // 检查订单基础信息
@@ -348,6 +357,9 @@ class OrdersController extends Controller {
         status: orderStatus || order.status,
         expressWay: expressWay || order.expressWay,
         expressCode: expressCode || order.expressCode,
+        expressAddress: expressAddress || order.expressAddress,
+        userCode: userCode || order.userCode,
+        userSignature: userSignature || order.userSignature,
       }, { orderCode: order.orderCode }, { transaction });
 
       // 更新商品库存

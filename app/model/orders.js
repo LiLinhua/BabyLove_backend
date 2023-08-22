@@ -12,6 +12,8 @@ module.exports = app => {
     totalPrice: { field: 'total_price', type: FLOAT, allowNull: false, comment: '订单总价格' },
     expressWay: { field: 'express_way', type: STRING(50), allowNull: true, comment: '配送方式' },
     expressCode: { field: 'express_code', type: STRING(50), allowNull: true, comment: '物流编码' },
+    expressAddress: { field: 'express_address', type: STRING(255), allowNull: true, comment: '配送地址' },
+    userSignature: { field: 'user_signature', type: STRING(999999), allowNull: true, comment: '用户签名' },
     status: { field: 'status', type: STRING(50), allowNull: false, comment: '订单状态，待付款（WAIT_PAY）、待发货（WAIT_SEND）、待收货（WAIT_GET）、已完成（FINISHED）和已取消（CANCELED）共5种状态' },
     createdAt: { field: 'created_at', type: DATE, allowNull: false, comment: '创建时间' },
     updatedAt: { field: 'updated_at', type: DATE, allowNull: false, comment: '更新时间' },

@@ -14,6 +14,9 @@ class BaseService extends Service {
   async findAll(where = {}, options = {}) {
     return await this.query('findAll', { where, ...options });
   }
+  async findAndCountAll(where = {}, options = {}) {
+    return await this.query('findAndCountAll', { where, ...options });
+  }
   async create(data, options = {}) {
     return await this.model.create(data, options);
   }

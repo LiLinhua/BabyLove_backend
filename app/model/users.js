@@ -7,6 +7,7 @@ module.exports = app => {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
     userCode: { field: 'user_code', type: STRING(50), allowNull: false, comment: '用户唯一编码' },
     userName: { field: 'user_name', type: STRING(50), allowNull: false, comment: '用户名' },
+    userNickname: { field: 'user_nickname', type: STRING(50), allowNull: true, comment: '用户姓名' },
     userPassword: { field: 'user_password', type: STRING(255), allowNull: false, comment: '用户密码' },
     userPhone: { field: 'user_phone', type: STRING(11), allowNull: true, comment: '用户手机号' },
     userBirthday: { field: 'user_birthday', type: DATE, allowNull: true, comment: '用户生日' },

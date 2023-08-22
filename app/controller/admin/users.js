@@ -212,11 +212,21 @@ class GoodsController extends Controller {
   async queryAllUsers() {
     const { ctx } = this;
     const { Op } = ctx.model.Sequelize;
-    let { keyword, userBirthdaySort, userWeddingDateSort } = ctx.request.body;
+    let { keyword, userBirthdaySort, userWeddingDateSort, pageIndex, pageSize } = ctx.request.body;
+    // 参数处理
     if (keyword && typeof keyword === 'string') {
       keyword = keyword.trim();
     } else {
       keyword = '';
+    }
+    if (typeof pageIndex !== 'number' || pageIndex < 1) {
+      pageIndex = 1;
+    }
+    if (typeof pageSize !== 'number' || pageSize < 1) {
+      pageSize = 10;
+    }
+    if (pageSize > 1000) {
+      pageSize = 1000;
     }
 
     try {
@@ -238,14 +248,22 @@ class GoodsController extends Controller {
       if (userWeddingDateSort === true) {
         order = [[ 'userWeddingDate', 'DESC' ]];
       }
-      const data = await ctx.service.users.findAll(where, {
+      const { count, rows } = await ctx.service.users.findAndCountAll(where, {
         attributes: {
           exclude: [ 'userPassword', 'deletedAt' ],
         },
         order,
+        offset: (pageIndex - 1) * pageSize,
+        limit: pageSize,
         raw: true,
       });
-      return ctx.helper.responseSuccess({ data });
+      return ctx.helper.responseSuccess({ data: {
+        list: rows,
+        pageIndex,
+        pageSize,
+        totalPages: Math.ceil(count / pageSize),
+        totalCount: count,
+      } });
     } catch (error) {
       return ctx.helper.responseError({}, error);
     }
