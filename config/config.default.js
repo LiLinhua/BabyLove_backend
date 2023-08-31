@@ -64,6 +64,13 @@ module.exports = appInfo => {
     },
   };
 
+  config.session = {
+    key: 'EGG_SESS',
+    maxAge: 3 * 24 * 3600 * 1000, // 3 天
+    httpOnly: true,
+    encrypt: true,
+  };
+
   const pictureDir = '/public/pictures';
   config.upload = {
     pictureDir,
@@ -72,11 +79,6 @@ module.exports = appInfo => {
 
   config.login = {
     cookieName: 'babylove_token',
-  };
-
-  config.hy = {
-    username: 'hy',
-    password: 'liyuchen@1108..??',
   };
 
   return config;

@@ -80,7 +80,7 @@ class GoodsController extends Controller {
    */
   async addUser() {
     const { ctx } = this;
-    let { userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers } = ctx.request.body;
+    let { userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userBalance, userOthers } = ctx.request.body;
 
     // 参数校验
     if (!userName) {
@@ -103,6 +103,9 @@ class GoodsController extends Controller {
     }
     if (userWeddingDate && !moment(userWeddingDate).isValid()) {
       return ctx.helper.responseError({ message: '用户结婚纪念日格式不合法' });
+    }
+    if (typeof userBalance !== 'number') {
+      return ctx.helper.responseError({ message: '用户余额格式不合法' });
     }
 
     try {
@@ -134,7 +137,7 @@ class GoodsController extends Controller {
    */
   async updateUser() {
     const { ctx } = this;
-    const { userCode, userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userOthers, isAdmin } = ctx.request.body;
+    const { userCode, userName, userPassword, userPhone, userBirthday, userAddress, userWeddingDate, userFavorite, userBalance, userOthers, isAdmin } = ctx.request.body;
 
     // 参数校验
     if (!userCode) {
@@ -145,6 +148,9 @@ class GoodsController extends Controller {
     }
     if (typeof userPhone === 'string' && userPhone && (userPhone.trim().length !== 11 || isNaN(userPhone))) {
       return ctx.helper.responseError({ message: '用户手机号码只能是11位数字' });
+    }
+    if (![ '', null, undefined ].includes(userBalance) && typeof userBalance !== 'number') {
+      return ctx.helper.responseError({ message: '用户余额格式不合法' });
     }
 
     try {
@@ -189,6 +195,9 @@ class GoodsController extends Controller {
       }
       if (userFavorite) {
         user.userFavorite = userFavorite;
+      }
+      if (typeof userBalance === 'number') {
+        user.userBalance = userBalance;
       }
       if (userOthers) {
         user.userOthers = userOthers;

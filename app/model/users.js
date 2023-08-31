@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = app => {
-  const { STRING, INTEGER, DATE } = app.Sequelize;
+  const { STRING, INTEGER, DATE, DOUBLE } = app.Sequelize;
 
   const Users = app.model.define('users', {
     id: { type: INTEGER, primaryKey: true, autoIncrement: true },
@@ -15,6 +15,7 @@ module.exports = app => {
     userWeddingDate: { field: 'user_wedding_date', type: DATE, allowNull: true, comment: '用户结婚纪念日' },
     userFavorite: { field: 'user_favorite', type: STRING(500), allowNull: true, comment: '用户喜好' },
     userOthers: { field: 'user_others', type: STRING(500), allowNull: true, comment: '用户其他信息' },
+    userBalance: { field: 'user_balance', type: DOUBLE, allowNull: true, default: 0, comment: '用户账户余额' },
     isAdmin: { field: 'is_admin', type: INTEGER, allowNull: false, default: 0, comment: '是否是系统管理员' },
     createdAt: { field: 'created_at', type: DATE, allowNull: false, comment: '创建时间' },
     updatedAt: { field: 'updated_at', type: DATE, allowNull: false, comment: '更新时间' },

@@ -6,7 +6,7 @@ class UserService extends BaseService {
     super({ ...props, modelName: 'Users' });
   }
   login(ctx, user) {
-    ctx.cookies.set(this.config.login.cookieName, user.userCode, { signed: true, encrypt: true });
+    ctx.cookies.set(this.config.login.cookieName, user.userCode, { signed: true, encrypt: true, maxAge: this.config.session.maxAge });
     ctx.session.user = user;
   }
   logout(ctx) {
