@@ -30,7 +30,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           // where: {
           //   [Op.or]: [
           //     { goodsCode: { [Op.like]: '%' + keyword + '%' } },
@@ -104,11 +104,11 @@ class OrdersController extends Controller {
     try {
       // 查询购物车与商品信息
       const order = await ctx.service.orders.findOne({ orderCode }, {
-        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'expressAddress', 'userSignature', 'status', 'createdAt' ],
+        attributes: [ 'orderCode', 'shoppingCartCode', 'totalCount', 'totalPrice', 'expressWay', 'expressCode', 'expressAddress', 'payWay', 'userSignature', 'status', 'createdAt' ],
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           through: {
             attributes: [ 'buyCount', 'goodsPrice' ],
           },
@@ -156,13 +156,16 @@ class OrdersController extends Controller {
    */
   async addOrder() {
     const { ctx, app } = this;
-    const { shoppingCartCode, expressWay, expressCode, expressAddress, orderStatus } = ctx.request.body;
+    const { shoppingCartCode, expressWay, expressCode, expressAddress, payWay, orderStatus } = ctx.request.body;
 
     if (!shoppingCartCode) {
       return ctx.helper.responseError({ message: '购物车编码不能为空' });
     }
     if (orderStatus && !ctx.service.orders.status[orderStatus]) {
       return ctx.helper.responseError({ message: '订单状态不合法' });
+    }
+    if (payWay && !ctx.service.order.payWay[payWay]) {
+      return ctx.helper.responseError({ message: '支付方式不合法' });
     }
 
     let transaction;
@@ -221,6 +224,7 @@ class OrdersController extends Controller {
         expressAddress,
         totalCount,
         totalPrice,
+        payWay: payWay || ctx.service.orders.payWays.USER_BALANCE,
         status: orderStatus || ctx.service.orders.status.WAIT_PAY,
       };
       await ctx.service.orders.create(orderInfo, { transaction });
@@ -250,11 +254,11 @@ class OrdersController extends Controller {
   }
 
   /**
-     * 检查订单
-     * @param orderCode
-     * @param orderStatus
-     * @param isCheckStatus
-     */
+   * 检查订单
+   * @param orderCode 订单号
+   * @param orderStatus 订单状态
+   * @param isCheckStatus 校验订单状态是否合法
+   */
   async checkOrderBeforeUpdate(orderCode, orderStatus, isCheckStatus = true) {
     const { ctx, app } = this;
 
@@ -266,7 +270,7 @@ class OrdersController extends Controller {
     try {
       // 查询订单信息
       const order = await ctx.service.orders.findOne({ orderCode }, {
-        attributes: [ 'orderCode', 'expressWay', 'expressCode', 'status', 'shoppingCartCode' ],
+        attributes: [ 'orderCode', 'expressWay', 'expressCode', 'status', 'shoppingCartCode', 'payWay', 'userCode', 'totalPrice' ],
         include: [{
           model: app.model.Goods,
           as: 'goods',
@@ -320,7 +324,7 @@ class OrdersController extends Controller {
    */
   async updateOrderBaseInfo() {
     const { ctx } = this;
-    const { orderCode, orderStatus, expressWay, expressCode, expressAddress, userCode, userSignature } = ctx.request.body;
+    const { orderCode, orderStatus, expressWay, expressCode, expressAddress, payWay, userCode, userSignature } = ctx.request.body;
 
     // 检查参数
     if (!orderStatus && expressWay === undefined && expressCode === undefined && expressAddress === undefined && !userCode && !userSignature) {
@@ -334,6 +338,10 @@ class OrdersController extends Controller {
     // 检查订单状态参数
     if (orderStatus && !ctx.service.orders.status[orderStatus]) {
       return ctx.helper.responseError({ message: '订单状态不合法，请检查' });
+    }
+    // 检查支付方式参数
+    if (payWay && !ctx.service.orders.payWays[payWay]) {
+      return ctx.helper.responseError({ message: '支付方式状态不合法，请检查' });
     }
 
     let transaction;
@@ -359,6 +367,7 @@ class OrdersController extends Controller {
         expressCode: expressCode || order.expressCode,
         expressAddress: expressAddress || order.expressAddress,
         userCode: userCode || order.userCode,
+        payWay: payWay || order.payWay,
         userSignature: userSignature || order.userSignature,
       }, { orderCode: order.orderCode }, { transaction });
 
@@ -375,6 +384,28 @@ class OrdersController extends Controller {
           needUpdateGoodsItem.goodsInventory = goodsInventoryMap[needUpdateGoodsItem.goodsCode];
         });
         await ctx.service.goods.bulkCreate(needUpdateGoods, { updateOnDuplicate: [ 'goodsInventory' ], transaction });
+      }
+
+      // 完成订单时，如果使用余额支付，则扣减用户余额
+      if (orderStatus !== order.status && orderStatus === ctx.service.orders.status.FINISHED && order.payWay === ctx.service.orders.payWays.USER_BALANCE) {
+        if (!order.userCode) {
+          // 回滚事务
+          transaction.rollback();
+          return ctx.helper.responseError({ message: '无法使用用户余额支付，请先关联用户' });
+        }
+        const user = await ctx.service.users.findOne({ userCode: order.userCode });
+        if (!user) {
+          // 回滚事务
+          transaction.rollback();
+          return ctx.helper.responseError({ message: '无法使用用户余额支付，关联用户不存在' });
+        }
+        if (!user.userBalance || user.userBalance < order.totalPrice) {
+          // 回滚事务
+          transaction.rollback();
+          return ctx.helper.responseError({ message: `无法使用用户余额支付，用户余额不足。余额: ${user.userBalance} 元` });
+        }
+        const userBalance = user.userBalance - order.totalPrice;
+        await ctx.service.users.update({ userBalance }, { userCode }, { transaction });
       }
 
       // 提交事务

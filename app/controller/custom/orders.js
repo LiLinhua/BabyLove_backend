@@ -35,7 +35,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           // where: {
           //   [Op.or]: [
           //     { goodsCode: { [Op.like]: '%' + keyword + '%' } },
@@ -109,7 +109,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice' ],
+          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           through: {
             attributes: [ 'buyCount', 'goodsPrice' ],
           },

@@ -65,8 +65,8 @@ module.exports = appInfo => {
   };
 
   config.session = {
-    key: 'EGG_SESS',
-    maxAge: 3 * 24 * 3600 * 1000, // 3 天
+    key: 'BABYLOVE_SESS',
+    maxAge: 1 * 24 * 3600 * 1000, // 1 天
     httpOnly: true,
     encrypt: true,
   };

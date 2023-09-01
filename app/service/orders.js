@@ -19,6 +19,18 @@ class OrdersService extends BaseService {
   }
 
   /**
+   * 支付方式
+   */
+  get payWays() {
+    return {
+      USER_BALANCE: 'USER_BALANCE', // 用户余额
+      CASH: 'CASH', // 现金
+      ALIPAY: 'ALIPAY', // 支付宝
+      WECHAT: 'WECHAT', // 微信
+    };
+  }
+
+  /**
    * 生成订单编码
    * @param number
    * @param count

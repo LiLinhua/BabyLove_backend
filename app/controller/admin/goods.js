@@ -9,7 +9,7 @@ class GoodsController extends Controller {
    */
   async addGoods() {
     const { ctx } = this;
-    const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
+    const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
     if (!goodsTitle) {
@@ -20,6 +20,12 @@ class GoodsController extends Controller {
     }
     if (isNaN(goodsPrice) || goodsPrice < 0) {
       return ctx.helper.responseError({ message: '商品价格不合法' });
+    }
+    if (!goodsOriginPrice) {
+      return ctx.helper.responseError({ message: '商品原格不能为空' });
+    }
+    if (isNaN(goodsOriginPrice) || goodsOriginPrice < 0) {
+      return ctx.helper.responseError({ message: '商品原格不合法' });
     }
     if (!goodsInventory) {
       return ctx.helper.responseError({ message: '商品库存不能为空' });
@@ -37,7 +43,7 @@ class GoodsController extends Controller {
       transaction = await ctx.model.transaction();
 
       // 创建商品
-      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsCatalog: goodsCatalogEnum.CHILDREN_CLOTHING }, { transaction });
+      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsCatalog: goodsCatalogEnum.CHILDREN_CLOTHING }, { transaction });
 
       // 创建商品图片
       const goodsPictures = goodsPictureCodes.map(code => {
@@ -62,7 +68,7 @@ class GoodsController extends Controller {
    */
   async updateGoods() {
     const { ctx } = this;
-    const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsCatalog, goodsInventory, goodsPictureCodes } = ctx.request.body;
+    const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsCatalog, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
     if (!goodsCode) {
@@ -79,6 +85,12 @@ class GoodsController extends Controller {
     }
     if (isNaN(goodsPrice) || goodsPrice < 0) {
       return ctx.helper.responseError({ message: '商品价格不合法' });
+    }
+    if (!goodsOriginPrice) {
+      return ctx.helper.responseError({ message: '商品原价不能为空' });
+    }
+    if (isNaN(goodsOriginPrice) || goodsOriginPrice < 0) {
+      return ctx.helper.responseError({ message: '商品原价不合法' });
     }
     if (!goodsInventory) {
       return ctx.helper.responseError({ message: '商品库存不能为空' });
@@ -102,7 +114,7 @@ class GoodsController extends Controller {
       transaction = await ctx.model.transaction();
 
       // 更新商品
-      await ctx.service.goods.update({ goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsInventory, goodsCatalog }, { goodsCode }, { transaction });
+      await ctx.service.goods.update({ goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsCatalog }, { goodsCode }, { transaction });
 
       // 更新商品图片
       // 移除现有的商品图片

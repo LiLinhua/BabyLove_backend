@@ -15,6 +15,7 @@ module.exports = app => {
     expressAddress: { field: 'express_address', type: STRING(255), allowNull: true, comment: '配送地址' },
     userSignature: { field: 'user_signature', type: STRING(999999), allowNull: true, comment: '用户签名' },
     status: { field: 'status', type: STRING(50), allowNull: false, comment: '订单状态，待付款（WAIT_PAY）、待发货（WAIT_SEND）、待收货（WAIT_GET）、已完成（FINISHED）和已取消（CANCELED）共5种状态' },
+    payWay: { field: 'pay_way', type: STRING(50), allowNull: false, default: 'USER_BALANCE', comment: '支付方式，可选值：USER_BALANCE（用户余额），CASH（现金），ALIPAY（支付宝），WECHAT（微信）' },
     createdAt: { field: 'created_at', type: DATE, allowNull: false, comment: '创建时间' },
     updatedAt: { field: 'updated_at', type: DATE, allowNull: false, comment: '更新时间' },
     deletedAt: { field: 'deleted_at', type: DATE, allowNull: true, comment: '删除时间' },
