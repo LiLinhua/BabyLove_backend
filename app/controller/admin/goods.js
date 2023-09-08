@@ -9,9 +9,12 @@ class GoodsController extends Controller {
    */
   async addGoods() {
     const { ctx } = this;
-    const { goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
+    const { goodsCatalog, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
+    if (!goodsCatalog) {
+      return ctx.helper.responseError({ message: '商品目录不能为空' });
+    }
     if (!goodsTitle) {
       return ctx.helper.responseError({ message: '商品标题不能为空' });
     }
@@ -77,8 +80,8 @@ class GoodsController extends Controller {
     if (!goodsTitle) {
       return ctx.helper.responseError({ message: '商品标题不能为空' });
     }
-    if (!goodsCatalogEnum[goodsCatalog]) {
-      return ctx.helper.responseError({ message: '商品目录不合法' });
+    if (!goodsCatalog) {
+      return ctx.helper.responseError({ message: '商品目录不能为空' });
     }
     if (!goodsPrice) {
       return ctx.helper.responseError({ message: '商品价格不能为空' });
