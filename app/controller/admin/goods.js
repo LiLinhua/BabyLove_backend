@@ -1,7 +1,6 @@
 'use strict';
 const { v4: uuidv4 } = require('uuid');
 const { Controller } = require('egg');
-const goodsCatalogEnum = require('../../constants/goods');
 
 class GoodsController extends Controller {
   /**
@@ -42,11 +41,17 @@ class GoodsController extends Controller {
 
     let transaction;
     try {
+      // 查询商品类型是否存在
+      const goodsCatalogDetail = await ctx.service.catalogs.findOne({ catalogCode: goodsCatalog }, { raw: true, attributes: [ 'id' ] });
+      if (!goodsCatalogDetail) {
+        return ctx.helper.responseError({ message: '商品目录不存在' });
+      }
+
       // 启动事务
       transaction = await ctx.model.transaction();
 
       // 创建商品
-      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsCatalog: goodsCatalogEnum.CHILDREN_CLOTHING }, { transaction });
+      const result = await ctx.service.goods.create({ goodsCode: uuidv4(), goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsInventory, goodsCatalog }, { transaction });
 
       // 创建商品图片
       const goodsPictures = goodsPictureCodes.map(code => {
@@ -74,14 +79,14 @@ class GoodsController extends Controller {
     const { goodsCode, goodsTitle, goodsSubtitle, goodsDetails, goodsPrice, goodsOriginPrice, goodsCatalog, goodsInventory, goodsPictureCodes } = ctx.request.body;
 
     // 参数校验
+    if (!goodsCatalog) {
+      return ctx.helper.responseError({ message: '商品目录不能为空' });
+    }
     if (!goodsCode) {
       return ctx.helper.responseError({ message: '商品编码不能为空' });
     }
     if (!goodsTitle) {
       return ctx.helper.responseError({ message: '商品标题不能为空' });
-    }
-    if (!goodsCatalog) {
-      return ctx.helper.responseError({ message: '商品目录不能为空' });
     }
     if (!goodsPrice) {
       return ctx.helper.responseError({ message: '商品价格不能为空' });
@@ -111,6 +116,12 @@ class GoodsController extends Controller {
       const goods = await ctx.service.goods.findOne({ goodsCode });
       if (!goods) {
         return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
+      }
+
+      // 查询商品类型是否存在
+      const goodsCatalogDetail = await ctx.service.catalogs.findOne({ catalogCode: goodsCatalog }, { raw: true, attributes: [ 'id' ] });
+      if (!goodsCatalogDetail) {
+        return ctx.helper.responseError({ message: '商品目录不存在' });
       }
 
       // 启动事务
