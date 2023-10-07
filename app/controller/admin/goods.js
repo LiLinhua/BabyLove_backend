@@ -29,7 +29,7 @@ class GoodsController extends Controller {
     if (isNaN(goodsOriginPrice) || goodsOriginPrice < 0) {
       return ctx.helper.responseError({ message: '商品原格不合法' });
     }
-    if (!goodsInventory) {
+    if ([ null, undefined, '' ].includes(goodsInventory)) {
       return ctx.helper.responseError({ message: '商品库存不能为空' });
     }
     if (isNaN(goodsInventory) || goodsInventory < 0) {
@@ -145,6 +145,40 @@ class GoodsController extends Controller {
     } catch (error) {
       // 回滚事务
       transaction.rollback();
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  /**
+   * 修改商品状态
+   */
+  async modifyGoodsStatus() {
+    const { ctx } = this;
+    const { goodsCode, goodsStatus } = ctx.request.body;
+
+    // 参数校验
+    if (!goodsCode) {
+      return ctx.helper.responseError({ message: '商品编码不能为空' });
+    }
+    if (!ctx.service.goods.status[goodsStatus]) {
+      return ctx.helper.responseError({ message: '商品状态非法' });
+    }
+
+    try {
+      // 验证商品是否存在
+      const goods = await ctx.service.goods.findOne({ goodsCode }, { raw: true, attributes: [ 'goodsStatus' ] });
+      if (!goods) {
+        return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
+      }
+      if (goods.goodsStatus === goodsStatus) {
+        return ctx.helper.responseSuccess();
+      }
+
+      // 修改商品状态
+      await ctx.service.goods.update({ goodsStatus }, { goodsCode });
+
+      return ctx.helper.responseSuccess();
+    } catch (error) {
       return ctx.helper.responseError({}, error);
     }
   }

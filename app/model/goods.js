@@ -13,6 +13,7 @@ module.exports = app => {
     goodsOriginPrice: { field: 'goods_origin_price', type: FLOAT, allowNull: false, comment: '商品原价' },
     goodsCatalog: { field: 'goods_catalog', type: STRING(50), allowNull: false, comment: '商品目录' },
     goodsInventory: { field: 'goods_inventory', type: INTEGER, allowNull: false, comment: '商品库存' },
+    goodsStatus: { field: 'goods_status', type: INTEGER, allowNull: false, comment: '商品状态，NORMAL（正常的）、OFFLINE（已下架）' },
     createdAt: { field: 'created_at', type: DATE, allowNull: false, comment: '创建时间' },
     updatedAt: { field: 'updated_at', type: DATE, allowNull: false, comment: '更新时间' },
     deletedAt: { field: 'deleted_at', type: DATE, allowNull: true, comment: '删除时间' },

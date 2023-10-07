@@ -25,6 +25,7 @@ module.exports = app => {
   router.get('/admin/goods/queryAllGoods', controller.admin.goods.queryAllGoods);
   router.get('/admin/goods/queryGoodsDetails', controller.admin.goods.queryGoodsDetails);
   router.post('/admin/goods/removeGoods', controller.admin.goods.removeGoods);
+  router.post('/admin/goods/modifyGoodsStatus', controller.admin.goods.modifyGoodsStatus);
   router.get('/admin/shoppingCarts/queryAllShoppingCarts', controller.admin.shoppingCarts.queryAllShoppingCarts);
   router.post('/admin/shoppingCarts/addShoppingCart', controller.admin.shoppingCarts.addShoppingCart);
   router.post('/admin/shoppingCarts/addGoods', controller.admin.shoppingCarts.addGoods);
@@ -58,6 +59,7 @@ module.exports = app => {
   router.get('/custom/shoppingCarts/queryAllGoodsCount', controller.custom.shoppingCarts.queryAllGoodsCount);
   router.post('/custom/orders/queryAllOrders', controller.custom.orders.queryAllOrders);
   router.post('/custom/orders/queryOrderDetails', controller.custom.orders.queryOrderDetails);
+  router.post('/custom/orders/checkOrder', controller.custom.orders.checkOrder);
   router.post('/custom/orders/cancelOrder', controller.custom.orders.cancelOrder);
   router.post('/custom/catalogs/queryAllCatalogs', controller.custom.catalogs.queryCatalogList);
 };

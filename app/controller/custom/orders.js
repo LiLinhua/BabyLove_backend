@@ -35,7 +35,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           // where: {
           //   [Op.or]: [
           //     { goodsCode: { [Op.like]: '%' + keyword + '%' } },
@@ -92,6 +92,64 @@ class OrdersController extends Controller {
   }
 
   /**
+   * 校验订单
+   */
+  async checkOrder() {
+    const { ctx, app } = this;
+    const { shoppingCartCode } = ctx.request.body;
+
+    if (!shoppingCartCode) {
+      return ctx.helper.responseError({ message: '购物车编码不能为空' });
+    }
+
+    try {
+      // 查询购物车商品信息
+      const shoppingCart = await ctx.service.shoppingCarts.findOne({}, {
+        attributes: [ 'shoppingCartCode' ],
+        where: {
+          shoppingCartCode,
+        },
+        include: [{
+          model: app.model.Goods,
+          as: 'goods',
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
+          through: {
+            attributes: [ 'buyCount', 'selected' ],
+            where: {
+              selected: 1,
+            },
+          },
+        }],
+      });
+
+      // 校验购物车信息
+      if (!shoppingCart) {
+        return ctx.helper.responseError({ message: '购物车不存在，请刷新页面再试' });
+      }
+
+      // 校验是否选择了商品
+      if (!shoppingCart.goods || shoppingCart.goods.length < 1) {
+        return ctx.helper.responseError({ message: '请先选购商品' });
+      }
+
+      // 校验商品库存，同时计算订单总数和总价
+      for (let i = 0; i < shoppingCart.goods.length; i++) {
+        const { goodsInventory, goodsTitle, goodsStatus, goodsShoppingCartsRelations } = shoppingCart.goods[i];
+        if (goodsInventory < 1 || goodsInventory < goodsShoppingCartsRelations.buyCount) {
+          return ctx.helper.responseError({ message: `您选购的商品“${goodsTitle}”库存不足` });
+        }
+        if (goodsStatus !== ctx.service.goods.status.NORMAL) {
+          return ctx.helper.responseError({ message: `您选购的商品“${goodsTitle}”已下架` });
+        }
+      }
+
+      return ctx.helper.responseSuccess({ data: true });
+    } catch (error) {
+      return ctx.helper.responseError({}, error);
+    }
+  }
+
+  /**
    * 查询订单详情
    */
   async queryOrderDetails() {
@@ -109,7 +167,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           through: {
             attributes: [ 'buyCount', 'goodsPrice' ],
           },

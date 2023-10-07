@@ -30,7 +30,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           // where: {
           //   [Op.or]: [
           //     { goodsCode: { [Op.like]: '%' + keyword + '%' } },
@@ -108,7 +108,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsTitle', 'goodsPrice', 'goodsOriginPrice' ],
           through: {
             attributes: [ 'buyCount', 'goodsPrice' ],
           },
@@ -179,7 +179,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
           through: {
             attributes: [ 'buyCount', 'selected' ],
             where: {
@@ -203,9 +203,12 @@ class OrdersController extends Controller {
       let totalPrice = 0;
       let totalCount = 0;
       for (let i = 0; i < shoppingCart.goods.length; i++) {
-        const { goodsInventory, goodsTitle, goodsPrice, goodsShoppingCartsRelations } = shoppingCart.goods[i];
-        if (goodsInventory < goodsShoppingCartsRelations.buyCount) {
+        const { goodsInventory, goodsTitle, goodsStatus, goodsPrice, goodsShoppingCartsRelations } = shoppingCart.goods[i];
+        if (goodsInventory < 1 || goodsInventory < goodsShoppingCartsRelations.buyCount) {
           return ctx.helper.responseError({ message: `您选购的商品“${goodsTitle}”库存不足` });
+        }
+        if (goodsStatus !== ctx.service.goods.status.NORMAL) {
+          return ctx.helper.responseError({ message: `您选购的商品“${goodsTitle}”已下架` });
         }
         totalCount += goodsShoppingCartsRelations.buyCount;
         totalPrice += goodsPrice * goodsShoppingCartsRelations.buyCount;
@@ -274,7 +277,7 @@ class OrdersController extends Controller {
         include: [{
           model: app.model.Goods,
           as: 'goods',
-          attributes: [ 'goodsCode', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
+          attributes: [ 'goodsCode', 'goodsStatus', 'goodsPrice', 'goodsTitle', 'goodsInventory' ],
           // through: {
           //   attributes: [ 'buyCount' ],
           // },
@@ -451,7 +454,7 @@ class OrdersController extends Controller {
 
       // 检查商品是否已下架
       const goods = await ctx.service.goods.findOne({ goodsCode });
-      if (!goods) {
+      if (!goods || goods.goodsStatus !== ctx.service.goods.status.NORMAL) {
         return ctx.helper.responseError({ message: '该商品已下架' });
       }
 
@@ -544,6 +547,9 @@ class OrdersController extends Controller {
 
       // 检查商品
       const goods = await ctx.service.goods.findOne({ goodsCode });
+      if (!goods || goods.goodsStatus !== ctx.service.goods.status.NORMAL) {
+        return ctx.helper.responseError({ message: '该商品已下架' });
+      }
 
       // 启动事务
       transaction = await ctx.model.transaction();

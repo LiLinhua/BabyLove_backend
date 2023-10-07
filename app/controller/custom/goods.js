@@ -15,6 +15,7 @@ class GoodsController extends Controller {
 
     try {
       const where = {
+        goodsStatus: ctx.service.goods.status.NORMAL,
         [Op.or]: [
           { goodsCode: { [Op.like]: '%' + keyword + '%' } },
           { goodsTitle: { [Op.like]: '%' + keyword + '%' } },

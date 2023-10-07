@@ -130,8 +130,11 @@ class ShoppingCartsController extends Controller {
       }
 
       const goods = await ctx.service.goods.findOne({ goodsCode });
-      if (!goods) {
-        return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
+      if (!goods || goods.goodsStatus !== ctx.service.goods.status.NORMAL) {
+        return ctx.helper.responseError({ message: '该商品已下架' });
+      }
+      if (goods.goodsInventory < 1) {
+        return ctx.helper.responseError({ message: '该商品库存不足' });
       }
 
       const relation = await ctx.service.goodsShoppingCartsRelations.findOne({ shoppingCartCode: shoppingCart.shoppingCartCode, goodsCode });
@@ -167,8 +170,8 @@ class ShoppingCartsController extends Controller {
     try {
       // 查询商品库存
       const goods = await ctx.service.goods.findOne({ goodsCode });
-      if (!goods) {
-        return ctx.helper.responseError({ message: '商品不存在或者已经被删除' });
+      if (!goods || goods.goodsStatus !== ctx.service.goods.status.NORMAL) {
+        return ctx.helper.responseError({ message: '该商品已下架' });
       }
       // 检查库存
       let newGoodsCount = buyCount;
@@ -191,7 +194,7 @@ class ShoppingCartsController extends Controller {
   async batchUpdateSelected() {
     const { ctx } = this;
     const { shoppingCartCode, goodsCodes, selected } = ctx.request.body;
-    const { Op } = ctx.model.Sequelize;
+    // const { Op } = ctx.model.Sequelize;
 
     if (!shoppingCartCode) {
       return ctx.helper.responseError({ message: '购物车编码不能为空' });
@@ -205,20 +208,34 @@ class ShoppingCartsController extends Controller {
 
     try {
       // 校验商品库存
-      const goods = await ctx.service.goods.findAll({ goodsCode: goodsCodes, goodsInventory: { [Op.gt]: 0 } });
-      const hasInventoryGoodsCodes = goods.map(item => item.goodsCode);
+      // const goods = await ctx.service.goods.findAll({ goodsCode: goodsCodes, goodsInventory: { [Op.gt]: 0 } });
+      // const finalGoodsCodes = [];
+      // const errorStatusGoodsCodes = [];
+      // goods.forEach(item => {
+      //   if (item.goodsStatus === ctx.service.goods.status.NORMAL) {
+      //     finalGoodsCodes.push(item.goodsCode);
+      //   } else {
+      //     errorStatusGoodsCodes.push(item.goodsCode);
+      //   }
+      // });
 
       // 查询关联记录
       const where = { shoppingCartCode };
-      where.goodsCode = selected ? hasInventoryGoodsCodes : goodsCodes;
+      // where.goodsCode = selected ? finalGoodsCodes : goodsCodes;
+      where.goodsCode = goodsCodes;
       const relations = await ctx.service.goodsShoppingCartsRelations.findAll(where, { raw: true });
       // 更新购买选择状态
       const newRelations = relations.map(relation => ({ ...relation, selected }));
       await ctx.service.goodsShoppingCartsRelations.bulkCreate(newRelations, { updateOnDuplicate: [ 'selected' ] });
 
-      if (selected && goods.length < 1 || goods.length !== goodsCodes.length) {
-        return ctx.helper.responseSuccess({ code: 'SOME_GOODS_EMPTY', message: `${goodsCodes.length > 1 && goodsCodes.length !== goods.length ? '部分' : '该'}商品库存不足` });
-      }
+      // if (selected) {
+      //   if (goods.length < 1 || goods.length !== goodsCodes.length) {
+      //     return ctx.helper.responseSuccess({ code: 'SOME_GOODS_EMPTY', message: `${goodsCodes.length > 1 && goodsCodes.length !== goods.length ? '部分' : '该'}商品库存不足` });
+      //   }
+      //   if (errorStatusGoodsCodes.length > 0) {
+      //     return ctx.helper.responseSuccess({ code: 'SOME_GOODS_STATUS_ERROR', message: `${goodsCodes.length > 1 ? '部分' : '该'}商品已经下架` });
+      //   }
+      // }
       return ctx.helper.responseSuccess();
     } catch (error) {
       return ctx.helper.responseError({}, error);
@@ -263,6 +280,24 @@ class ShoppingCartsController extends Controller {
       if (!shoppingCart) {
         return ctx.helper.responseError({ message: '购物车不存在或者已经被删除' });
       }
+
+
+      // 收集状态不正常的商品
+      // if (Array.isArray(shoppingCart.goods)) {
+      //   const errorStatusGoods = [];
+
+      //   shoppingCart.goods.forEach(goodsItem => {
+      //     if (goodsItem.goodsStatus !== ctx.service.goods.status.NORMAL) {
+      //       errorStatusGoods.push(goodsItem.goodsCode);
+      //     }
+      //   });
+
+      //   // 更新购物车中，状态不正常的商品选择状态
+      //   if (errorStatusGoods.length > 0) {
+      //     await ctx.service.goodsShoppingCartsRelations.update({ selected: 0 }, { shoppingCartCode, goodsCode: errorStatusGoods });
+      //   }
+      // }
+
 
       // 查询购物车与商品关系
       const relations = await ctx.service.goodsShoppingCartsRelations.findAll({ shoppingCartCode }, { raw: true });
