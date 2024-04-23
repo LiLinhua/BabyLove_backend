@@ -12,6 +12,10 @@
 
 <img src="assets/images/preview.png" alt="BabyLove" width="150">
 
+## 对应的前端服务
+
+https://gitee.com/LiLinhua/BabyLove_frontend
+
 
 ## 什么技术？
 
